@@ -54,7 +54,7 @@ void ServerFacade::SetFacingTo(Player* bot, WorldObject* wo, bool force)
 
     if (!bot->IsRooted())
         // enforce (bool self) true otherwhise when using real-client with self-bot wont
-        // recieve update; e.g. will not face the target when using ranged attack
+        // recieve update; e.g. will not face the target when using (mostly ranged) attack
         bot->SendMovementFlagUpdate(true);
 }
 
