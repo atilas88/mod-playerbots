@@ -5,6 +5,7 @@
 
 #include "LootAction.h"
 
+#include "Bag.h"
 #include "ChatHelper.h"
 #include "Event.h"
 #include "GuildMgr.h"
@@ -369,6 +370,9 @@ bool StoreLootAction::Execute(Event event)
         p >> items;  // 1 number of items on corpse
     }
 
+    LOG_DEBUG("playerbots", "[StoreLoot] {} got SMSG_LOOT_RESPONSE guid={} loot_type={} gold={} items={}",
+              bot->GetName(), guid.ToString(), uint32(loot_type), gold, uint32(items));
+
     bot->SetLootGUID(guid);
 
     if (gold > 0)
@@ -393,17 +397,30 @@ bool StoreLootAction::Execute(Event event)
         p.read_skip<uint32>();  // randomPropertyId
         p >> lootslot_type;     // 0 = can get, 1 = look only, 2 = master get
 
+        LOG_DEBUG("playerbots", "[StoreLoot] {}   slot={} item={} count={} slot_type={}",
+                  bot->GetName(), uint32(itemindex), itemid, itemcount, uint32(lootslot_type));
+
         if (lootslot_type != LOOT_SLOT_TYPE_ALLOW_LOOT && lootslot_type != LOOT_SLOT_TYPE_OWNER)
+        {
+            LOG_DEBUG("playerbots", "[StoreLoot] {}     skipped: slot_type={} not allowed",
+                      bot->GetName(), uint32(lootslot_type));
             continue;
+        }
 
         if (loot_type != LOOT_SKINNING && !IsLootAllowed(itemid, botAI))
+        {
+            LOG_DEBUG("playerbots", "[StoreLoot] {}     skipped: IsLootAllowed rejected item={}",
+                      bot->GetName(), itemid);
             continue;
+        }
 
         ItemTemplate const* proto = sObjectMgr->GetItemTemplate(itemid);
         if (!proto)
             continue;
 
-        if (!botAI->HasActivePlayerMaster() && AI_VALUE(uint8, "bag space") > 80)
+        // bags >80%: skip non-stackable junk (quest items exempt)
+        if (!botAI->HasActivePlayerMaster() && AI_VALUE(uint8, "bag space") > 80 &&
+            !bot->HasQuestForItem(itemid))
         {
             uint32 maxStack = proto->GetMaxStackSize();
             if (maxStack == 1)
@@ -439,6 +456,60 @@ bool StoreLootAction::Execute(Event event)
                         GuildTaskMgr::instance().CheckItemTask(itemid, itemcount, ref->GetSource(), bot);
         }
 
+        // bags full + quest item: make room by dropping cheapest junk
+        if (bot->HasQuestForItem(itemid))
+        {
+            ItemPosCountVec dest;
+            InventoryResult can =
+                bot->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, itemid, itemcount);
+            if (can == EQUIP_ERR_INVENTORY_FULL || can == EQUIP_ERR_BAG_FULL)
+            {
+                // picked by usage, not quality — high-level bots have no grays
+                Item* victim = nullptr;
+                uint32 minPrice = std::numeric_limits<uint32>::max();
+                auto consider = [&](uint8 bag, uint8 slot)
+                {
+                    Item* it = bot->GetItemByPos(bag, slot);
+                    if (!it)
+                        return;
+                    ItemTemplate const* tpl = it->GetTemplate();
+                    if (!tpl)
+                        return;
+                    if (bot->HasQuestForItem(tpl->ItemId))
+                        return;
+                    ItemUsage usage = AI_VALUE2(ItemUsage, "item usage", tpl->ItemId);
+                    if (usage != ITEM_USAGE_NONE && usage != ITEM_USAGE_VENDOR &&
+                        usage != ITEM_USAGE_BAD_EQUIP && usage != ITEM_USAGE_BROKEN_EQUIP)
+                        return;
+                    if (tpl->SellPrice < minPrice)
+                    {
+                        minPrice = tpl->SellPrice;
+                        victim = it;
+                    }
+                };
+                for (uint8 slot = INVENTORY_SLOT_ITEM_START; slot < INVENTORY_SLOT_ITEM_END; ++slot)
+                    consider(INVENTORY_SLOT_BAG_0, slot);
+                for (uint8 bag = INVENTORY_SLOT_BAG_START; bag < INVENTORY_SLOT_BAG_END; ++bag)
+                {
+                    Bag* pBag = bot->GetBagByPos(bag);
+                    if (!pBag)
+                        continue;
+                    for (uint32 slot = 0; slot < pBag->GetBagSize(); ++slot)
+                        consider(bag, static_cast<uint8>(slot));
+                }
+                if (victim)
+                {
+                    LOG_DEBUG("playerbots",
+                              "[StoreLoot] {} bags full — destroying {} (entry={}) to make room for quest item {}",
+                              bot->GetName(), victim->GetTemplate()->Name1,
+                              victim->GetTemplate()->ItemId, itemid);
+                    bot->DestroyItem(victim->GetBagSlot(), victim->GetSlot(), true);
+                }
+            }
+        }
+
+        LOG_DEBUG("playerbots", "[StoreLoot] {}     queueing CMSG_AUTOSTORE_LOOT_ITEM slot={} item={}",
+                  bot->GetName(), uint32(itemindex), itemid);
         WorldPacket* packet = new WorldPacket(CMSG_AUTOSTORE_LOOT_ITEM, 1);
         *packet << itemindex;
         bot->GetSession()->QueuePacket(packet);
