@@ -76,6 +76,11 @@ protected:
     bool CheckRpgStatusAvailable(NewRpgStatus status);
 
 protected:
+    // Emit a one-line trace describing the imminent movement. No-op
+    // unless the bot has the "debug move" non-combat strategy.
+    void EmitDebugMove(char const* method, float dx, float dy, float dz);
+
+protected:
     /* FOR MOVE FAR */
     const float pathFinderDis = 35.0f;
 };

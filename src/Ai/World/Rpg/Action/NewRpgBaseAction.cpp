@@ -38,6 +38,127 @@
 
 #include <unordered_set>
 
+void NewRpgBaseAction::EmitDebugMove(char const* method, float dx, float dy, float dz)
+{
+    if (!botAI->HasStrategy("debug move", BOT_STATE_NON_COMBAT))
+        return;
+
+    auto resolveName = [&](ObjectGuid guid) -> std::string
+    {
+        if (!guid)
+            return "";
+        if (WorldObject* obj = botAI->GetWorldObject(guid))
+            return obj->GetName();
+        return "";
+    };
+
+    NewRpgInfo& info = botAI->rpgInfo;
+    NewRpgStatus status = info.GetStatus();
+    char const* statusName =
+        status == RPG_IDLE ? "idle" :
+        status == RPG_GO_GRIND ? "go-grind" :
+        status == RPG_GO_CAMP ? "go-camp" :
+        status == RPG_WANDER_NPC ? "wander-npc" :
+        status == RPG_WANDER_RANDOM ? "wander-random" :
+        status == RPG_REST ? "rest" :
+        status == RPG_DO_QUEST ? "do-quest" :
+        status == RPG_TRAVEL_FLIGHT ? "travel-flight" :
+        status == RPG_OUTDOOR_PVP ? "outdoor-pvp" : "?";
+
+    std::string targetName = "-";
+    switch (status)
+    {
+        case RPG_DO_QUEST:
+            if (auto* data = std::get_if<NewRpgInfo::DoQuest>(&info.data))
+            {
+                ObjectGuid guid = data->pursuedLootGO ? data->pursuedLootGO
+                                : data->pursuedUseGO ? data->pursuedUseGO
+                                : data->pursuedUseTarget;
+                std::string n = resolveName(guid);
+                if (!n.empty())
+                    targetName = n;
+                else if (data->quest)
+                {
+                    bool turnIn = data->questId &&
+                        bot->GetQuestStatus(data->questId) == QUEST_STATUS_COMPLETE;
+                    if (turnIn)
+                    {
+                        std::ostringstream t;
+                        t << "turn-in:" << data->quest->GetTitle() << "(" << data->questId << ")";
+                        targetName = t.str();
+                    }
+                    else
+                    {
+                        // first incomplete objective: mob / GO / item
+                        Quest const* q = data->quest;
+                        QuestStatusData const& qs = bot->getQuestStatusMap().at(data->questId);
+                        std::string goal;
+                        for (int i = 0; i < QUEST_OBJECTIVES_COUNT; ++i)
+                        {
+                            int32 entry = q->RequiredNpcOrGo[i];
+                            if (entry != 0 && qs.CreatureOrGOCount[i] < q->RequiredNpcOrGoCount[i])
+                            {
+                                if (entry > 0)
+                                {
+                                    if (CreatureTemplate const* ct = sObjectMgr->GetCreatureTemplate(entry))
+                                        goal = "mob:" + ct->Name;
+                                }
+                                else
+                                {
+                                    if (GameObjectTemplate const* gt = sObjectMgr->GetGameObjectTemplate(-entry))
+                                        goal = "go:" + gt->name;
+                                }
+                                break;
+                            }
+                            uint32 item = q->RequiredItemId[i];
+                            if (item && bot->GetItemCount(item, true) < q->RequiredItemCount[i])
+                            {
+                                if (ItemTemplate const* it = sObjectMgr->GetItemTemplate(item))
+                                    goal = "item:" + it->Name1;
+                                break;
+                            }
+                        }
+                        if (goal.empty())
+                        {
+                            std::ostringstream t;
+                            t << "quest:" << q->GetTitle() << "(" << data->questId << ")";
+                            goal = t.str();
+                        }
+                        targetName = goal;
+                    }
+                }
+            }
+            break;
+        case RPG_WANDER_NPC:
+            if (auto* data = std::get_if<NewRpgInfo::WanderNpc>(&info.data))
+            {
+                std::string n = resolveName(data->npcOrGo);
+                if (!n.empty())
+                    targetName = "npc:" + n;
+            }
+            break;
+        case RPG_TRAVEL_FLIGHT:
+            if (auto* data = std::get_if<NewRpgInfo::TravelFlight>(&info.data))
+            {
+                std::string n = resolveName(data->fromFlightMaster);
+                if (!n.empty())
+                    targetName = "flightmaster:" + n;
+            }
+            break;
+        case RPG_GO_GRIND: targetName = "grind-pos"; break;
+        case RPG_GO_CAMP: targetName = "camp-pos"; break;
+        case RPG_WANDER_RANDOM: targetName = "wander-random"; break;
+        default: break;
+    }
+
+    float dis = bot->GetExactDist(dx, dy, dz);
+    std::ostringstream out;
+    out << "[MOVE] type=" << method << " | state=" << statusName << " | dist=" << dis << "y"
+        << " | loc=(" << dx << "," << dy << "," << dz << ")"
+        << " | target=" << targetName;
+    botAI->TellMasterNoFacing(out);
+}
+
 bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
 {
     if (dest == WorldPosition())
@@ -65,127 +186,11 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
     float disToDest = bot->GetDistance(dest);
     float dis = bot->GetExactDist(dest);
 
-    auto debugMove = [&](std::string const& method)
-    {
-        if (!botAI->HasStrategy("debug move", BOT_STATE_NON_COMBAT))
-            return;
-        std::string targetName = "-";
-        auto resolveName = [&](ObjectGuid guid) -> std::string
-        {
-            if (!guid)
-                return "";
-            if (WorldObject* obj = botAI->GetWorldObject(guid))
-                return obj->GetName();
-            return "";
-        };
-        NewRpgInfo& info = botAI->rpgInfo;
-        NewRpgStatus status = info.GetStatus();
-        char const* statusName =
-            status == RPG_IDLE ? "idle" :
-            status == RPG_GO_GRIND ? "go-grind" :
-            status == RPG_GO_CAMP ? "go-camp" :
-            status == RPG_WANDER_NPC ? "wander-npc" :
-            status == RPG_WANDER_RANDOM ? "wander-random" :
-            status == RPG_REST ? "rest" :
-            status == RPG_DO_QUEST ? "do-quest" :
-            status == RPG_TRAVEL_FLIGHT ? "travel-flight" :
-            status == RPG_OUTDOOR_PVP ? "outdoor-pvp" : "?";
-        switch (status)
-        {
-            case RPG_DO_QUEST:
-                if (auto* data = std::get_if<NewRpgInfo::DoQuest>(&info.data))
-                {
-                    ObjectGuid guid = data->pursuedLootGO ? data->pursuedLootGO
-                                    : data->pursuedUseGO ? data->pursuedUseGO
-                                    : data->pursuedUseTarget;
-                    std::string n = resolveName(guid);
-                    if (!n.empty())
-                        targetName = n;
-                    else if (data->quest)
-                    {
-                        bool turnIn = data->questId &&
-                            bot->GetQuestStatus(data->questId) == QUEST_STATUS_COMPLETE;
-                        if (turnIn)
-                        {
-                            std::ostringstream t;
-                            t << "turn-in:" << data->quest->GetTitle() << "(" << data->questId << ")";
-                            targetName = t.str();
-                        }
-                        else
-                        {
-                            // first incomplete objective: mob / GO / item
-                            Quest const* q = data->quest;
-                            QuestStatusData const& qs = bot->getQuestStatusMap().at(data->questId);
-                            std::string goal;
-                            for (int i = 0; i < QUEST_OBJECTIVES_COUNT; ++i)
-                            {
-                                int32 entry = q->RequiredNpcOrGo[i];
-                                if (entry != 0 && qs.CreatureOrGOCount[i] < q->RequiredNpcOrGoCount[i])
-                                {
-                                    if (entry > 0)
-                                    {
-                                        if (CreatureTemplate const* ct = sObjectMgr->GetCreatureTemplate(entry))
-                                            goal = "mob:" + ct->Name;
-                                    }
-                                    else
-                                    {
-                                        if (GameObjectTemplate const* gt = sObjectMgr->GetGameObjectTemplate(-entry))
-                                            goal = "go:" + gt->name;
-                                    }
-                                    break;
-                                }
-                                uint32 item = q->RequiredItemId[i];
-                                if (item && bot->GetItemCount(item, true) < q->RequiredItemCount[i])
-                                {
-                                    if (ItemTemplate const* it = sObjectMgr->GetItemTemplate(item))
-                                        goal = "item:" + it->Name1;
-                                    break;
-                                }
-                            }
-                            if (goal.empty())
-                            {
-                                std::ostringstream t;
-                                t << "quest:" << q->GetTitle() << "(" << data->questId << ")";
-                                goal = t.str();
-                            }
-                            targetName = goal;
-                        }
-                    }
-                }
-                break;
-            case RPG_WANDER_NPC:
-                if (auto* data = std::get_if<NewRpgInfo::WanderNpc>(&info.data))
-                {
-                    std::string n = resolveName(data->npcOrGo);
-                    if (!n.empty())
-                        targetName = "npc:" + n;
-                }
-                break;
-            case RPG_TRAVEL_FLIGHT:
-                if (auto* data = std::get_if<NewRpgInfo::TravelFlight>(&info.data))
-                {
-                    std::string n = resolveName(data->fromFlightMaster);
-                    if (!n.empty())
-                        targetName = "flightmaster:" + n;
-                }
-                break;
-            case RPG_GO_GRIND: targetName = "grind-pos"; break;
-            case RPG_GO_CAMP: targetName = "camp-pos"; break;
-            case RPG_WANDER_RANDOM: targetName = "wander-random"; break;
-            default: break;
-        }
-        std::ostringstream out;
-        out << "[MOVE] type=" << method << " | state=" << statusName << " | dist=" << dis << "y"
-            << " | loc=(" << dest.GetPositionX() << "," << dest.GetPositionY() << "," << dest.GetPositionZ() << ")"
-            << " | target=" << targetName;
-        botAI->TellMasterNoFacing(out);
-    };
-
     // short range: spline straight. obstacles this close are rare enough
     // that mmap isn't worth the cost; beyond pathFinderDis we always mmap.
     if (dis < pathFinderDis)
     {
-        debugMove("spline");
+        EmitDebugMove("spline", dest.GetPositionX(), dest.GetPositionY(), dest.GetPositionZ());
         return MoveTo(dest.GetMapId(), dest.GetPositionX(), dest.GetPositionY(), dest.GetPositionZ(), false, false,
                       false, true);
     }
@@ -205,7 +210,7 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
             float endDistToDest = dest.GetExactDist(endPos.x, endPos.y, endPos.z);
             if (endDistToDest + 5.0f < disToDest)
             {
-                debugMove("mmap");
+                EmitDebugMove("mmap", endPos.x, endPos.y, endPos.z);
                 return MoveTo(bot->GetMapId(), endPos.x, endPos.y, endPos.z, false, false, false, true);
             }
         }
@@ -244,10 +249,10 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
     }
     if (found)
     {
-        debugMove("cone");
+        EmitDebugMove("cone", rx, ry, rz);
         return MoveTo(bot->GetMapId(), rx, ry, rz, false, false, false, true);
     }
-    debugMove("FAILED");
+    EmitDebugMove("FAILED", dest.GetPositionX(), dest.GetPositionY(), dest.GetPositionZ());
     return false;
 }
 
@@ -283,6 +288,7 @@ bool NewRpgBaseAction::MoveWorldObjectTo(ObjectGuid guid, float distance)
         y = object->GetPositionY();
         z = object->GetPositionZ();
     }
+    EmitDebugMove("worldobj", x, y, z);
     return MoveTo(mapId, x, y, z, false, false, false, true);
 }
 
@@ -321,7 +327,10 @@ bool NewRpgBaseAction::MoveRandomNear(float moveStep, MovementPriority priority,
 
         bool moved = MoveTo(bot->GetMapId(), dx, dy, dz, false, false, false, true, priority);
         if (moved)
+        {
+            EmitDebugMove("random", dx, dy, dz);
             return true;
+        }
     }
 
     return false;
