@@ -196,14 +196,10 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
     if (dis < splineLOSMaxDis && dest.GetMapId() == bot->GetMapId())
     {
         constexpr float zLift = 1.5f;  // raise above floor to dodge ground self-hits
-        // ALL_CHECKS = VMAP (static walls/terrain) + GOBJECT_WMO + GOBJECT_M2
-        // (dynamic GOs like trees/posts/chests/closed doors). Catches more
-        // obstacles than VMAP alone — important for trees that ship with
-        // no static collision geometry but exist as M2 GOs.
         if (bot->GetMap()->isInLineOfSight(
                 bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ() + zLift,
                 dest.GetPositionX(), dest.GetPositionY(), dest.GetPositionZ() + zLift,
-                bot->GetPhaseMask(), LINEOFSIGHT_ALL_CHECKS, VMAP::ModelIgnoreFlags::Nothing))
+                bot->GetPhaseMask(), LINEOFSIGHT_CHECK_VMAP, VMAP::ModelIgnoreFlags::Nothing))
         {
             EmitDebugMove("spline", dest.GetPositionX(), dest.GetPositionY(), dest.GetPositionZ());
             return MoveTo(dest.GetMapId(), dest.GetPositionX(), dest.GetPositionY(), dest.GetPositionZ(),
