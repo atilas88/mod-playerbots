@@ -18,165 +18,163 @@ EXTRACT_MMAPS=true
 MMAP_THREADS=0           # 0 = auto-detect (each thread uses 1-2 GB RAM)
 MMAP_SINGLE_MAP=""       # e.g. "489" for Warsong Gulch only
 
-# ─── MMAP CONFIG (player-tuned, not NPC-tuned) ──────────────────────────────
-#
-# ac-stock NPC-tuned defaults for reference:
-#   walkableSlopeAngle 60, walkableHeight 6, walkableClimb 6,
-#   walkableRadius 2, verticesPerMapEdge 2000, verticesPerTileEdge 80,
-#   maxSimplificationError 1.8
-#
-# Two voxel dimensions feed Recast:
-#   cs = cellSizeHorizontal — defaults to baseUnitDim (= GRID_SIZE / vertices)
-#   ch = cellSizeVertical   — defaults to baseUnitDim (same)
-# Per-cell values scale by:
-#   walkableHeight  → ch  (vertical voxels — minimum ceiling clearance)
-#   walkableClimb   → ch  (vertical voxels — max step height)
-#   walkableRadius  → cs  (horizontal voxels — wall buffer / agent radius)
-# When a per-map override changes ch but not cs, walkableHeight and
-# walkableClimb need rescaling to preserve world-unit size; walkableRadius
-# does NOT (it scales with cs).
-#
-# At our verticesPerMapEdge=3201 → baseUnitDim ≈ 0.1666 wu (cs = ch by default):
-#   walkableHeight 12 = 2.00 wu, walkableClimb 5 = 0.83 wu, walkableRadius 3 = 0.50 wu
-#
-# Player physics (verified from ObjectDefines.h):
-#   DEFAULT_COLLISION_HEIGHT  = 2.03128 wu  (player capsule height)
-#   DEFAULT_WORLD_OBJECT_SIZE = 0.389   wu  (player collision radius)
-# Slip angle ~50° is a community estimate — not a hard AC constant.
-#
+# Verbatim copy of azerothcore-wotlk/master:src/tools/mmaps_generator/mmaps-config.yaml
+# (also the same config the mod-playerbots fork ships).
 MMAPS_CONFIG_YAML=$(cat <<'YAML_EOF'
 mmapsConfig:
   skipLiquid: false
   skipContinents: false
-  skipJunkMaps: false
+  skipJunkMaps: true
   skipBattlegrounds: false
-  dataDir: "."
+
+  # Path to the directory containing navigation data files.
+  # This directory should contain the "maps" and "vmaps" folders,
+  # and is also where the "mmaps" folder will be created or located.
+  dataDir: "./"
 
   meshSettings:
+    # Here we have global config for recast navigation.
+    # It's possible to override these data on map or tile level (see mapsOverrides).
 
-    # Maximum slope angle (degrees) the navmesh marks walkable. Anything
-    # steeper is excluded entirely — bots will route around. The WoW
-    # client is community-reported to slip players above ~50°, so we
-    # set this below that threshold: bots only path through reliably-
-    # walkable terrain. Going lower makes routing more conservative;
-    # higher lets bots try slopes they'll slide off in-game.
-    # NOTE: 50° is an approximate community value, not a hard AC constant.
-    # ac-stock value: 60
+    # Maximum slope angle (in degrees) NPCs can walk on.
+    # Surfaces steeper than this will be considered unwalkable.
     walkableSlopeAngle: 50
 
-    # Minimum ceiling clearance, in vertical voxels (multiplied by ch =
-    # cellSizeVertical to get world units). Per-map cellSizeVertical
-    # overrides REQUIRE a matching adjustment to this value to preserve
-    # the world-unit footprint.
-    # At our default ch ≈ 0.1666 wu: 12 cells ≈ 2.00 wu — matches the
-    # actual DEFAULT_COLLISION_HEIGHT (2.03 wu) closely. ac-stock's 6
-    # cells is undersized (1.6 wu at their cs/ch), so AC bots/NPCs
-    # technically fit through gaps players don't.
-    # Lowering kicks low-ceiling dungeon corridors out of the navmesh.
-    # ac-stock value: 6
-    walkableHeight: 12
-
-    # Maximum step height the navmesh treats as walkable without a jump,
-    # in vertical voxels (× ch for world units). Stairs are typically
-    # ~0.5 wu/step, fences ~1.0+ wu.
-    # At our default ch: 5 cells ≈ 0.83 wu — handles stairs cleanly,
-    # blocks fences so bots walk around them like players do. ac-stock
-    # 6 (= 1.6 wu) lets NPCs hop fences. Drop to 4 for stricter
-    # player-match — risks failing on chunky-step dungeon staircases.
-    # ac-stock value: 6
-    walkableClimb: 5
-
-    # Minimum distance from walls, in horizontal voxels (× cs for world
-    # units). Effectively the agent's collision radius for navmesh
-    # generation. Player collision radius is 0.389 wu (verified from
-    # DEFAULT_WORLD_OBJECT_SIZE).
-    # At our cs ≈ 0.1666 wu: 3 cells = 0.50 wu — small buffer beyond the
-    # player capsule, so paths don't run flush against walls and we get
-    # less poly-edge ambiguity at navmesh seams (root cause of cave→
-    # cliff wall-clipping). 2 cells (= 0.33 wu) is tighter than the
-    # player capsule and risks bots brushing walls. Trade-off going
-    # higher: loses access to the very narrowest doorways.
-    # ac-stock value: 2
-    walkableRadius: 3
-
-    # Number of vertices along one edge of the full map's navmesh grid.
-    # Determines baseUnitDim via Config.cpp's ComputeBaseUnitDim:
-    #   baseUnitDim = GRID_SIZE / verticesPerMapEdge   (where GRID_SIZE = 533.3333)
-    # Higher = finer mesh, more detail, more RAM/time:
-    #   2000 → baseUnit ≈ 0.2667 wu  (ac-stock — too coarse for some caves)
-    #   2667 → baseUnit ≈ 0.2000 wu  (~1.78× ac-stock cost)
-    #   3201 → baseUnit ≈ 0.1666 wu  (ours; ~2.66× ac-stock cost)
-    #   4001 → baseUnit ≈ 0.1333 wu  (~4× cost; ~2GB+ extra RAM/thread)
-    # ac-stock value: 2000
-    verticesPerMapEdge: 3201
-
-    # Number of vertices per tile (sub-grid). Should divide
-    # (verticesPerMapEdge - 1) evenly for seamless tile borders. With
-    # vertices=3201, (3201-1)/400 = 8 tiles per edge → 64 tiles per map.
-    # Sweet spot between two extremes:
-    #   - Smaller tiles (80, 200) → many tile boundaries, more path
-    #     stitching artifacts, but per-tile loads are tiny.
-    #   - Larger tiles (800+) → fewer seams, but each .mmtile is much
-    #     bigger so the first-load when a bot enters a fresh region
-    #     can be a perceptible hitch.
-    # 400 keeps mid-range bot paths (50-150y) almost always in-tile
-    # while keeping per-tile load size modest.
-    # ac-stock value: 80
-    verticesPerTileEdge: 400
-
-    # Tolerance for how much simplified navmesh polygons may deviate from
-    # the original geometry. Higher = fewer polygons, faster runtime, but
-    # smooths over slope and ledge transitions that affect player-style
-    # pathing. Lower = more polys, slower, more accurate. Don't go below
-    # 1.0 — poly count explodes without measurable benefit.
-    # ac-stock value: 1.8
-    maxSimplificationError: 1.3
-
-  mapsOverrides:
-    # ─── Continent Z-accuracy overrides ──────────────────────────────
-    # Default cellSizeVertical = baseUnitDim ≈ 0.1666 wu at our
-    # resolution. That's coarse enough that bots visibly hover ~0.1-0.2
-    # wu above textured ground on hilly outdoor terrain. Tightening
-    # vertical cells to 0.05 wu (~5 cm) on continent maps gets bots
-    # much closer to the actual surface.
+    # --- Cell Size Calculation ---
+    # Many parameters below are defined in "cell units".
+    # In RecastDemo, you often work with world units instead of cell units.
+    # By default, these cell units are converted to world units using the formula:
     #
-    # IMPORTANT: walkableHeight and walkableClimb scale with ch, so
-    # they MUST be rescaled here to preserve the same world-unit
-    # footprint we set in meshSettings:
-    #   walkableHeight 12 cells × 0.1666 = 2.00 wu  →  40 × 0.05 = 2.00 wu
-    #   walkableClimb   5 cells × 0.1666 = 0.83 wu  →  17 × 0.05 = 0.85 wu
-    # walkableRadius scales with cs (unchanged here) and stays the same.
+    #     cellSize = MMAP::GRID_SIZE / (verticesPerMapEdge - 1)
     #
-    # Cost: ~30% more RAM/time on these four maps. Indoor maps
-    # (dungeons, raids) keep the default — vertical complexity there
-    # is quantized (floors, stairs) and finer ch can confuse
-    # overlapping levels.
-    "0":     # Eastern Kingdoms
-      cellSizeVertical: 0.05
-      walkableHeight: 40
-      walkableClimb: 17
-    "1":     # Kalimdor
-      cellSizeVertical: 0.05
-      walkableHeight: 40
-      walkableClimb: 17
-    "530":   # Outland
-      cellSizeVertical: 0.05
-      walkableHeight: 40
-      walkableClimb: 17
-    "571":   # Northrend
-      cellSizeVertical: 0.05
-      walkableHeight: 40
-      walkableClimb: 17
+    # Where:
+    #     MMAP::GRID_SIZE = 533.3333f (the size of one map tile in world units)
+    #     verticesPerMapEdge = number of vertices along one edge of the full map grid
+    #
+    # Example:
+    #     If verticesPerMapEdge = 2000, then:
+    #         cellSize ≈ 533.3333 / (2000 - 1) ≈ 0.2667 world units per cell
+    #
+    # To convert a value from cell units to world units (e.g., walkableClimb),
+    # multiply by cellSize. For example, a walkableClimb of 6 corresponds to:
+    #     6 * 0.2667 ≈ 1.6 world units
 
-    # ─── Other map-specific fixes ────────────────────────────────────
-    "562":   # Blade's Edge Arena — walk on ropes to pillars
-      walkableRadius: 0
-    "48":    # Blackfathom Deeps — coarse ch separates overlapping levels
-      cellSizeVertical: 0.5334
-    "529":   # Arathi Basin Lumber Mill — don't drop feared players
-      tilesOverrides:
-        "30,29":
-          walkableSlopeAngle: 45
+    # Minimum ceiling height (in cell units) NPCs need to pass under an obstacle.
+    # Controls how much vertical clearance is required.
+    # To convert to world units, multiply by cellSize (see "Cell Size Calculation").
+    walkableHeight: 6
+
+    # Maximum height difference (in cell units) NPCs can step up or down.
+    # Higher values allow walking over fences, ledges, or steps.
+    # To convert to world units, multiply by cellSize (see "Cell Size Calculation").
+    #
+    # Vanilla WotLK uses 6, which allows creatures to "jump" over fences.
+    # Classic WotLK uses 4, which forces creatures to walk around fences.
+    walkableClimb: 4
+
+    # Minimum distance (in cell units) around walkable surfaces.
+    # Helps prevent NPCs from clipping into walls and narrow gaps.
+    # To convert to world units, multiply by cellSize (see "Cell Size Calculation").
+    walkableRadius: 2
+
+    # Number of vertices along one edge of the entire map's navmesh grid.
+    # Higher values increase mesh resolution but also CPU/memory usage.
+    # NOTE: parser key is singular (vertexPerMapEdge, see Config.cpp:205);
+    # the AC upstream YAML uses the plural form which is silently ignored.
+    # 3041 chosen so (3041-1)/160 = 19 — clean tile divisibility.
+    vertexPerMapEdge: 3041
+
+    # Number of vertices along one edge of each tile chunk.
+    # Must divide (vertexPerMapEdge - 1) evenly for seamless tiles.
+    # A higher vertex count per tile means fewer total tiles,
+    # reducing runtime work to load, unload, and manage tiles.
+    # NOTE: parser key is singular (vertexPerTileEdge, see Config.cpp:206).
+    vertexPerTileEdge: 160
+
+    # Tolerance for how much a polygon can deviate from the original geometry when simplified.
+    # Higher values produce simpler (faster) meshes but can reduce accuracy.
+    maxSimplificationError: 1.0
+
+    # You can override any global parameter for a specific map by specifying its map ID.
+    # Inside each map override, you can also override parameters per individual tile,
+    # identified by a string "tileX,tileY" (coordinates).
+    #
+    # Overrides cascade: global settings → map overrides → tile overrides.
+    # For example:
+    #
+    # mapsOverrides:
+    #   "0":                              # Map ID 0 overrides
+    #     walkableRadius: 5               # Override global climb height for entire map 0
+    #
+    #     tilesOverrides:
+    #       "50,70":                      # Tile at coordinates (50,70) on map 0
+    #         walkableSlopeAngle: 70      # Override slope angle locally just here
+    #         walkableClimb: 4            # Also override climb height for this tile only
+    #
+    #       "51,71":
+    #         walkableClimb: 3            # Override climb height for tile (51,71)
+    #
+    #       "48,32":
+    #         walkableClimb: 1            # Even smaller climb for tile (48,32)
+    #
+    #   "1":                              # Map ID 1 overrides example
+    #     walkableHeight: 8               # Increase clearance for whole map 1
+    #
+    #     tilesOverrides:
+    #       "100,100":
+    #         maxSimplificationError: 2.5 # Looser mesh simplification for this tile only
+    #
+    #       "101,101":
+    #         walkableRadius: 1           # Smaller NPC radius here for tight corridors
+    #
+    # This approach allows very fine-grained control of navigation mesh parameters
+    # on a per-map and per-tile basis, optimizing pathfinding quality and performance.
+    #
+    # All parameters defined globally are eligible for override.
+    # Just specify the parameter name and new value in the override section.
+    mapsOverrides:
+      "562": # Blade's Edge Arena
+        walkableRadius: 0 # This allows walking on the ropes to the pillars
+
+      "48": # Blackfathom Deeps
+        cellSizeVertical: 0.5334 # ch*2 = 0.2667 * 2 ≈ 0.5334. Reduce the chance to have underground levels.
+
+      "529": # Arathi Basin
+        tilesOverrides:
+          "30,29": # Lumber Mill
+            # Make sure that Fear will not drop players rom cliff -
+            # https://github.com/azerothcore/azerothcore-wotlk/pull/22462#issuecomment-3067024680
+            walkableSlopeAngle: 45
+
+      "530": # Outland
+        tilesOverrides:
+          "32,30": # Dark portal
+            walkableSlopeAngle: 45 # https://github.com/chromiecraft/chromiecraft/issues/8404#issuecomment-3476012660
+
+  # debugOutput generates debug files in the `meshes` directory for use with RecastDemo.
+  # This is useful for inspecting and debugging mmap generation visually.
+  #
+  # My workflow:
+  # 1. Install RecastDemo. I'm building it from the source of this fork: https://github.com/jackpoz/recastnavigation
+  # 2. In-game, move your character to the area you want to debug.
+  # 3. Type `.mmap loc` in chat. This will output:
+  #    - The current tile file name (e.g., `04832.mmtile`)
+  #    - The Recast config values used to generate that tile
+  # 4. Enable `debugOutput` and regenerate mmaps (preferably just the tile from step 3).
+  #    - To regenerate only one tile, delete it from the `mmaps` folder.
+  # 5. After generation, you will find debug files in the `meshes` folder, including an OBJ file (e.g., `map0004832.obj`)
+  # 6. Copy these debug files to the `Meshes` folder used by RecastDemo.
+  #    - RecastDemo expects this folder to be in the same directory as its executable.
+  # 7. In RecastDemo:
+  #    - Click "Input Mesh" and select the `.obj` file
+  #    - Choose "Solo Mesh" in the Sample selector
+  # 8. (Optional) Reuse the Recast config values from step 3:
+  #    - `cellSizeHorizontal` → "Cell Size"
+  #    - `walkableSlopeAngle` → "Max Slope"
+  #    - `walkableClimb` → "Max Climb"
+  #    - and so on
+  # 9. Scroll to the bottom of RecastDemo UI and press "Build" to generate the navigation mesh
+  debugOutput: false
 YAML_EOF
 )
 
