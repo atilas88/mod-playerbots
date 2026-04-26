@@ -186,20 +186,13 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
     float disToDest = bot->GetDistance(dest);
     float dis = bot->GetExactDist(dest);
 
-    // Short range: spline straight, no mmap pre-routing needed.
-    if (dis < pathFinderDis)
-    {
-        EmitDebugMove("spline", dest.GetPositionX(), dest.GetPositionY(), dest.GetPositionZ());
-        return MoveTo(dest.GetMapId(), dest.GetPositionX(), dest.GetPositionY(), dest.GetPositionZ(), false, false,
-                      false, true);
-    }
-
-    // Mid range (pathFinderDis ≤ dis < splineLOSMaxDis): spline if vmap
-    // confirms direct line of sight. mmap is only useful for routing
-    // around obstacles — if there's nothing in the way, the engine's
-    // internal spline pathing handles it cleanly. Saves a PathGenerator
-    // pass on every "see and walk to the obvious target" case.
-    constexpr float splineLOSMaxDis = 60.0f;
+    // Spline if target is within the spline cap AND vmap confirms a
+    // direct line of sight. mmap pre-routing is only worth its cost
+    // when there's an obstacle to route around — straight-line, in-
+    // sight targets are handled fine by the engine's internal spline.
+    // No-LOS targets (wall/cliff/different room) always fall through
+    // to mmap, regardless of distance.
+    constexpr float splineLOSMaxDis = 40.0f;
     if (dis < splineLOSMaxDis && dest.GetMapId() == bot->GetMapId())
     {
         constexpr float zLift = 1.5f;  // raise above floor to dodge ground self-hits
