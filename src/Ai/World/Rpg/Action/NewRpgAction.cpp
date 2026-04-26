@@ -343,6 +343,24 @@ bool NewRpgDoQuestAction::DoIncompleteQuest(NewRpgInfo::DoQuest& data)
         if (HasNearbyQuestMob(15.0f))
             return false;
 
+        // Occasional yield so attack-anything can pick off a passing
+        // hostile. Gated on "hostile actually in range" so we don't
+        // burn ticks yielding into nothing, and rate-limited so we
+        // don't fight every mob we walk past — multiplier still
+        // dominates, this just opens an occasional window.
+        GuidVector nearbyTargets = AI_VALUE(GuidVector, "possible targets");
+        for (ObjectGuid guid : nearbyTargets)
+        {
+            Unit* u = botAI->GetUnit(guid);
+            if (!u || !u->IsAlive())
+                continue;
+            if (bot->GetDistance(u) > 25.0f)
+                continue;
+            if (urand(0, 9) == 0)  // 10% per tick when a hostile is in range
+                return false;
+            break;
+        }
+
         if (MoveFarTo(data.pos))
             return true;
         // sampler found nothing — nudge so next tick tries a new pos

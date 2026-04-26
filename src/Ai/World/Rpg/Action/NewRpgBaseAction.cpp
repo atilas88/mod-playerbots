@@ -186,13 +186,32 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
     float disToDest = bot->GetDistance(dest);
     float dis = bot->GetExactDist(dest);
 
-    // short range: spline straight. obstacles this close are rare enough
-    // that mmap isn't worth the cost; beyond pathFinderDis we always mmap.
+    // Short range: spline straight, no mmap pre-routing needed.
     if (dis < pathFinderDis)
     {
         EmitDebugMove("spline", dest.GetPositionX(), dest.GetPositionY(), dest.GetPositionZ());
         return MoveTo(dest.GetMapId(), dest.GetPositionX(), dest.GetPositionY(), dest.GetPositionZ(), false, false,
                       false, true);
+    }
+
+    // Mid range (pathFinderDis ≤ dis < splineLOSMaxDis): spline if vmap
+    // confirms direct line of sight. mmap is only useful for routing
+    // around obstacles — if there's nothing in the way, the engine's
+    // internal spline pathing handles it cleanly. Saves a PathGenerator
+    // pass on every "see and walk to the obvious target" case.
+    constexpr float splineLOSMaxDis = 60.0f;
+    if (dis < splineLOSMaxDis && dest.GetMapId() == bot->GetMapId())
+    {
+        constexpr float zLift = 1.5f;  // raise above floor to dodge ground self-hits
+        if (bot->GetMap()->isInLineOfSight(
+                bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ() + zLift,
+                dest.GetPositionX(), dest.GetPositionY(), dest.GetPositionZ() + zLift,
+                bot->GetPhaseMask(), LINEOFSIGHT_CHECK_VMAP, VMAP::ModelIgnoreFlags::Nothing))
+        {
+            EmitDebugMove("spline", dest.GetPositionX(), dest.GetPositionY(), dest.GetPositionZ());
+            return MoveTo(dest.GetMapId(), dest.GetPositionX(), dest.GetPositionY(), dest.GetPositionZ(),
+                          false, false, false, true);
+        }
     }
 
     const uint32 typeOk = PATHFIND_NORMAL | PATHFIND_INCOMPLETE | PATHFIND_FARFROMPOLY;
@@ -261,6 +280,19 @@ bool NewRpgBaseAction::MoveWorldObjectTo(ObjectGuid guid, float distance)
     WorldObject* object = botAI->GetWorldObject(guid);
     if (!object)
         return false;
+
+    // Already in interaction range: walk to the object's exact position
+    // with no random offset. The per-tick offset jitter forces a fresh
+    // PathGenerator pass each tick and, near a navmesh poly edge, can
+    // snap the bot to the wrong polygon (cause of cave→cliff wall-clip
+    // glitches). A stable destination = stable poly = stable spline.
+    if (bot->GetDistance(object) <= INTERACTION_DISTANCE)
+    {
+        return MoveFarTo(WorldPosition(object->GetMapId(),
+                                       object->GetPositionX(),
+                                       object->GetPositionY(),
+                                       object->GetPositionZ()));
+    }
 
     float x = object->GetPositionX();
     float y = object->GetPositionY();
