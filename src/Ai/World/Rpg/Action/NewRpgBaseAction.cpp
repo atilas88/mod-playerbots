@@ -258,18 +258,13 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
 
 bool NewRpgBaseAction::MoveWorldObjectTo(ObjectGuid guid, float distance)
 {
-    if (IsWaitingForLastMove(MovementPriority::MOVEMENT_NORMAL))
-    {
-        return false;
-    }
-
     WorldObject* object = botAI->GetWorldObject(guid);
     if (!object)
         return false;
+
     float x = object->GetPositionX();
     float y = object->GetPositionY();
     float z = object->GetPositionZ();
-    float mapId = object->GetMapId();
     float angle = 0.f;
 
     if (!object->ToUnit() || !object->ToUnit()->isMoving())
@@ -288,8 +283,10 @@ bool NewRpgBaseAction::MoveWorldObjectTo(ObjectGuid guid, float distance)
         y = object->GetPositionY();
         z = object->GetPositionZ();
     }
-    EmitDebugMove("worldobj", x, y, z);
-    return MoveTo(mapId, x, y, z, false, false, false, true);
+    // Delegate to MoveFarTo so distant walks get proper mmap routing
+    // around obstacles instead of a straight spline, and so the trace
+    // labels the actual method used (spline / mmap / cone).
+    return MoveFarTo(WorldPosition(object->GetMapId(), x, y, z));
 }
 
 bool NewRpgBaseAction::MoveRandomNear(float moveStep, MovementPriority priority, WorldObject* center)
