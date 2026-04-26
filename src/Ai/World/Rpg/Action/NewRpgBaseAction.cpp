@@ -186,32 +186,13 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
     float disToDest = bot->GetDistance(dest);
     float dis = bot->GetExactDist(dest);
 
-    // Short range: spline straight, no mmap pre-routing needed.
+    // short range: spline straight. obstacles this close are rare enough
+    // that mmap isn't worth the cost; beyond pathFinderDis we always mmap.
     if (dis < pathFinderDis)
     {
         EmitDebugMove("spline", dest.GetPositionX(), dest.GetPositionY(), dest.GetPositionZ());
         return MoveTo(dest.GetMapId(), dest.GetPositionX(), dest.GetPositionY(), dest.GetPositionZ(), false, false,
                       false, true);
-    }
-
-    // Mid range (pathFinderDis ≤ dis < splineLOSMaxDis): spline if vmap
-    // confirms direct line of sight. mmap is only useful for routing
-    // around obstacles — if there's nothing in the way, the engine's
-    // internal spline pathing handles it cleanly. Saves a PathGenerator
-    // pass on every "see and walk to the obvious target" case.
-    constexpr float splineLOSMaxDis = 60.0f;
-    if (dis < splineLOSMaxDis && dest.GetMapId() == bot->GetMapId())
-    {
-        constexpr float zLift = 1.5f;  // raise above floor to dodge ground self-hits
-        if (bot->GetMap()->isInLineOfSight(
-                bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ() + zLift,
-                dest.GetPositionX(), dest.GetPositionY(), dest.GetPositionZ() + zLift,
-                bot->GetPhaseMask(), LINEOFSIGHT_CHECK_VMAP, VMAP::ModelIgnoreFlags::Nothing))
-        {
-            EmitDebugMove("spline", dest.GetPositionX(), dest.GetPositionY(), dest.GetPositionZ());
-            return MoveTo(dest.GetMapId(), dest.GetPositionX(), dest.GetPositionY(), dest.GetPositionZ(),
-                          false, false, false, true);
-        }
     }
 
     const uint32 typeOk = PATHFIND_NORMAL | PATHFIND_INCOMPLETE | PATHFIND_FARFROMPOLY;
