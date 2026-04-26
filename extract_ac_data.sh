@@ -81,8 +81,9 @@ mmapsConfig:
     # Higher values increase mesh resolution but also CPU/memory usage.
     # NOTE: parser key is singular (vertexPerMapEdge, see Config.cpp:205);
     # the AC upstream YAML uses the plural form which is silently ignored.
-    # 3041 chosen so (3041-1)/160 = 19 — clean tile divisibility.
-    vertexPerMapEdge: 3041
+    # 2000 = ac-stock; finer mesh produces more thin-wall polys at WMO
+    # boundaries that mmap can misconnect (cause of tree-house glitches).
+    vertexPerMapEdge: 2000
 
     # Number of vertices along one edge of each tile chunk.
     # Must divide (vertexPerMapEdge - 1) evenly for seamless tiles.
@@ -93,7 +94,7 @@ mmapsConfig:
 
     # Tolerance for how much a polygon can deviate from the original geometry when simplified.
     # Higher values produce simpler (faster) meshes but can reduce accuracy.
-    maxSimplificationError: 1.0
+    maxSimplificationError: 1.3
 
     # You can override any global parameter for a specific map by specifying its map ID.
     # Inside each map override, you can also override parameters per individual tile,
