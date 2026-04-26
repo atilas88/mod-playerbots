@@ -90,7 +90,7 @@ mmapsConfig:
     # A higher vertex count per tile means fewer total tiles,
     # reducing runtime work to load, unload, and manage tiles.
     # NOTE: parser key is singular (vertexPerTileEdge, see Config.cpp:206).
-    vertexPerTileEdge: 160
+    vertexPerTileEdge: 80
 
     # Tolerance for how much a polygon can deviate from the original geometry when simplified.
     # Higher values produce simpler (faster) meshes but can reduce accuracy.
