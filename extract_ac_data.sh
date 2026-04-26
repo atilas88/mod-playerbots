@@ -25,10 +25,24 @@ MMAP_SINGLE_MAP=""       # e.g. "489" for Warsong Gulch only
 #   walkableRadius 2, verticesPerMapEdge 2000, verticesPerTileEdge 80,
 #   maxSimplificationError 1.8
 #
-# Cell-unit values scale with verticesPerMapEdge:
-#   cellSize = 533.3333 / (verticesPerMapEdge - 1)
-# At our verticesPerMapEdge=3201 → cs ≈ 0.1667 wu, so:
-#   walkableHeight 10 = 1.67 wu, walkableClimb 5 = 0.83 wu, walkableRadius 2 = 0.33 wu
+# Two voxel dimensions feed Recast:
+#   cs = cellSizeHorizontal — defaults to baseUnitDim (= GRID_SIZE / vertices)
+#   ch = cellSizeVertical   — defaults to baseUnitDim (same)
+# Per-cell values scale by:
+#   walkableHeight  → ch  (vertical voxels — minimum ceiling clearance)
+#   walkableClimb   → ch  (vertical voxels — max step height)
+#   walkableRadius  → cs  (horizontal voxels — wall buffer / agent radius)
+# When a per-map override changes ch but not cs, walkableHeight and
+# walkableClimb need rescaling to preserve world-unit size; walkableRadius
+# does NOT (it scales with cs).
+#
+# At our verticesPerMapEdge=3201 → baseUnitDim ≈ 0.1666 wu (cs = ch by default):
+#   walkableHeight 12 = 2.00 wu, walkableClimb 5 = 0.83 wu, walkableRadius 3 = 0.50 wu
+#
+# Player physics (verified from ObjectDefines.h):
+#   DEFAULT_COLLISION_HEIGHT  = 2.03128 wu  (player capsule height)
+#   DEFAULT_WORLD_OBJECT_SIZE = 0.389   wu  (player collision radius)
+# Slip angle ~50° is a community estimate — not a hard AC constant.
 #
 MMAPS_CONFIG_YAML=$(cat <<'YAML_EOF'
 mmapsConfig:
@@ -41,53 +55,62 @@ mmapsConfig:
   meshSettings:
 
     # Maximum slope angle (degrees) the navmesh marks walkable. Anything
-    # steeper is excluded entirely — bots will route around. WoW client
-    # slips players above ~50°, so we set this below the slip threshold:
-    # bots only path through reliably-walkable terrain. Going lower makes
-    # routing more conservative; higher lets bots try slippery slopes
-    # they'll slide off in-game.
+    # steeper is excluded entirely — bots will route around. The WoW
+    # client is community-reported to slip players above ~50°, so we
+    # set this below that threshold: bots only path through reliably-
+    # walkable terrain. Going lower makes routing more conservative;
+    # higher lets bots try slopes they'll slide off in-game.
+    # NOTE: 50° is an approximate community value, not a hard AC constant.
     # ac-stock value: 60
     walkableSlopeAngle: 50
 
-    # Minimum ceiling clearance — how tall the "agent" must fit. In CELL
-    # UNITS, so it scales with cellSize (set by verticesPerMapEdge below).
-    # At our cs ≈ 0.1667 wu: 10 cells = 1.67 wu, which matches the player
-    # collision capsule (~1.6 wu). Lowering kicks low-ceiling dungeon
-    # corridors out of the navmesh; raising lets bots into spots players
-    # can't fit.
-    # ac-stock value: 6  (= 1.6 wu at ac-stock cs ≈ 0.2667 — same world footprint)
-    walkableHeight: 10
+    # Minimum ceiling clearance, in vertical voxels (multiplied by ch =
+    # cellSizeVertical to get world units). Per-map cellSizeVertical
+    # overrides REQUIRE a matching adjustment to this value to preserve
+    # the world-unit footprint.
+    # At our default ch ≈ 0.1666 wu: 12 cells ≈ 2.00 wu — matches the
+    # actual DEFAULT_COLLISION_HEIGHT (2.03 wu) closely. ac-stock's 6
+    # cells is undersized (1.6 wu at their cs/ch), so AC bots/NPCs
+    # technically fit through gaps players don't.
+    # Lowering kicks low-ceiling dungeon corridors out of the navmesh.
+    # ac-stock value: 6
+    walkableHeight: 12
 
-    # Maximum step height (CELL UNITS) the navmesh treats as walkable
-    # without a jump. Stairs are typically ~0.5 wu/step, fences ~1.0+ wu.
-    # At our cs: 5 cells = 0.83 wu — handles stairs cleanly, blocks fences
-    # so bots walk around them like players do. ac-stock 6 (= 1.6 wu)
-    # lets NPCs hop fences. Drop to 4 (= 0.67 wu) for stricter
+    # Maximum step height the navmesh treats as walkable without a jump,
+    # in vertical voxels (× ch for world units). Stairs are typically
+    # ~0.5 wu/step, fences ~1.0+ wu.
+    # At our default ch: 5 cells ≈ 0.83 wu — handles stairs cleanly,
+    # blocks fences so bots walk around them like players do. ac-stock
+    # 6 (= 1.6 wu) lets NPCs hop fences. Drop to 4 for stricter
     # player-match — risks failing on chunky-step dungeon staircases.
     # ac-stock value: 6
     walkableClimb: 5
 
-    # Minimum distance from walls (CELL UNITS) the navmesh maintains.
-    # Effectively the agent's collision radius. Player capsule radius is
-    # ~0.388 wu. At our cs: 2 cells = 0.33 wu — slightly tighter than the
-    # player capsule, so paths can run very close to walls. 3 cells
-    # (= 0.5 wu) adds a 0.1 wu buffer that reduces poly-edge ambiguity at
-    # navmesh seams (root cause of cave→cliff wall-clipping). Trade-off:
-    # higher loses access to the very narrowest doorways (rare in 3.3.5a).
+    # Minimum distance from walls, in horizontal voxels (× cs for world
+    # units). Effectively the agent's collision radius for navmesh
+    # generation. Player collision radius is 0.389 wu (verified from
+    # DEFAULT_WORLD_OBJECT_SIZE).
+    # At our cs ≈ 0.1666 wu: 3 cells = 0.50 wu — small buffer beyond the
+    # player capsule, so paths don't run flush against walls and we get
+    # less poly-edge ambiguity at navmesh seams (root cause of cave→
+    # cliff wall-clipping). 2 cells (= 0.33 wu) is tighter than the
+    # player capsule and risks bots brushing walls. Trade-off going
+    # higher: loses access to the very narrowest doorways.
     # ac-stock value: 2
-    walkableRadius: 2
+    walkableRadius: 3
 
     # Number of vertices along one edge of the full map's navmesh grid.
-    # Determines cellSize via:  cellSize = 533.3333 / (vertices - 1)
+    # Determines baseUnitDim via Config.cpp's ComputeBaseUnitDim:
+    #   baseUnitDim = GRID_SIZE / verticesPerMapEdge   (where GRID_SIZE = 533.3333)
     # Higher = finer mesh, more detail, more RAM/time:
-    #   2000 → cs ≈ 0.2667 wu  (ac-stock — too coarse for some caves)
-    #   2667 → cs ≈ 0.2000 wu  (~1.78× ac-stock cost)
-    #   3201 → cs ≈ 0.1667 wu  (ours; ~2.66× ac-stock cost)
-    #   4001 → cs ≈ 0.1334 wu  (~4× cost; ~2GB+ extra RAM/thread)
+    #   2000 → baseUnit ≈ 0.2667 wu  (ac-stock — too coarse for some caves)
+    #   2667 → baseUnit ≈ 0.2000 wu  (~1.78× ac-stock cost)
+    #   3201 → baseUnit ≈ 0.1666 wu  (ours; ~2.66× ac-stock cost)
+    #   4001 → baseUnit ≈ 0.1333 wu  (~4× cost; ~2GB+ extra RAM/thread)
     # ac-stock value: 2000
     verticesPerMapEdge: 3201
 
-    # Number of vertices per tile (sub-grid). Must divide
+    # Number of vertices per tile (sub-grid). Should divide
     # (verticesPerMapEdge - 1) evenly for seamless tile borders. With
     # vertices=3201, (3201-1)/400 = 8 tiles per edge → 64 tiles per map.
     # Sweet spot between two extremes:
@@ -111,22 +134,39 @@ mmapsConfig:
 
   mapsOverrides:
     # ─── Continent Z-accuracy overrides ──────────────────────────────
-    # Default cellSizeVertical = baseUnitDim ≈ 0.167 wu at our
-    # resolution. That's coarse enough that bots visibly hover
-    # ~0.1-0.2 wu above textured ground on hilly outdoor terrain.
-    # Tightening vertical cells to 0.05 wu (~5 cm) on the continent
-    # maps gets bots much closer to the actual surface. Cost: ~30%
-    # more RAM/time on these four maps. Indoor maps (dungeons, raids)
-    # keep the default — vertical complexity there is quantized
-    # (floors, stairs) and finer ch can confuse overlapping levels.
+    # Default cellSizeVertical = baseUnitDim ≈ 0.1666 wu at our
+    # resolution. That's coarse enough that bots visibly hover ~0.1-0.2
+    # wu above textured ground on hilly outdoor terrain. Tightening
+    # vertical cells to 0.05 wu (~5 cm) on continent maps gets bots
+    # much closer to the actual surface.
+    #
+    # IMPORTANT: walkableHeight and walkableClimb scale with ch, so
+    # they MUST be rescaled here to preserve the same world-unit
+    # footprint we set in meshSettings:
+    #   walkableHeight 12 cells × 0.1666 = 2.00 wu  →  40 × 0.05 = 2.00 wu
+    #   walkableClimb   5 cells × 0.1666 = 0.83 wu  →  17 × 0.05 = 0.85 wu
+    # walkableRadius scales with cs (unchanged here) and stays the same.
+    #
+    # Cost: ~30% more RAM/time on these four maps. Indoor maps
+    # (dungeons, raids) keep the default — vertical complexity there
+    # is quantized (floors, stairs) and finer ch can confuse
+    # overlapping levels.
     "0":     # Eastern Kingdoms
       cellSizeVertical: 0.05
+      walkableHeight: 40
+      walkableClimb: 17
     "1":     # Kalimdor
       cellSizeVertical: 0.05
+      walkableHeight: 40
+      walkableClimb: 17
     "530":   # Outland
       cellSizeVertical: 0.05
+      walkableHeight: 40
+      walkableClimb: 17
     "571":   # Northrend
       cellSizeVertical: 0.05
+      walkableHeight: 40
+      walkableClimb: 17
 
     # ─── Other map-specific fixes ────────────────────────────────────
     "562":   # Blade's Edge Arena — walk on ropes to pillars
