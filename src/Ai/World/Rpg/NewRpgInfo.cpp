@@ -78,14 +78,6 @@ void NewRpgInfo::Reset()
     startT = getMSTime();
 }
 
-void NewRpgInfo::SetMoveFarTo(WorldPosition pos)
-{
-    nearestMoveFarDis = FLT_MAX;
-    stuckTs = 0;
-    stuckAttempts = 0;
-    moveFarPos = pos;
-}
-
 NewRpgStatus NewRpgInfo::GetStatus()
 {
     return std::visit([](auto&& arg) -> NewRpgStatus {

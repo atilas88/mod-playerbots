@@ -43,39 +43,13 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
     if (dest == WorldPosition())
         return false;
 
-    if (dest != botAI->rpgInfo.moveFarPos)
-    {
-        // clear stuck information if it's a new dest
-        botAI->rpgInfo.SetMoveFarTo(dest);
-    }
-
-    // performance optimization
-    if (IsWaitingForLastMove(MovementPriority::MOVEMENT_NORMAL))
-    {
-        return false;
-    }
-
-    // Let previously committed movement finish before recomputing.
-    //
-    // MoveTo internally caps its stored delay at maxWaitForMove
-    // (default 5s), but a long path (200+ yd routed around a
-    // mountain) takes 30+ seconds to walk. After 5s
-    // IsWaitingForLastMove returns false and MoveFarTo re-enters.
-    // Without this gate, DoMovePoint would call mm->Clear() and
-    // reissue MovePoint from the new bot position — and from a new
-    // position mmap's partial-path endpoint often differs, so the
-    // bot gets clobbered mid-walk and ends up oscillating (e.g.
-    // cave entrance -> inside cave -> cave entrance -> mountain
-    // base -> cave entrance...) around an unreachable destination.
-    //
-    // If the bot is still actively walking toward its last
-    // committed point on the same map, just let the current spline
-    // finish. The stuck counter below continues to track real
-    // progress toward dest and triggers teleport recovery if the
-    // committed paths genuinely aren't closing the gap.
+    // don't interrupt an active spline — IsWaitingForLastMove caps at 5s
+    // so long walks would restart mid-way. Finalized() over isMoving()
+    // because isMoving() lingers a tick after a silently ended spline.
     {
         LastMovement& lastMove = AI_VALUE(LastMovement&, "last movement");
-        if (bot->isMoving() && lastMove.lastMoveToMapId == bot->GetMapId())
+        bool splineActive = bot->movespline && !bot->movespline->Finalized();
+        if (splineActive && lastMove.lastMoveToMapId == bot->GetMapId())
         {
             float remaining = bot->GetExactDist(lastMove.lastMoveToX, lastMove.lastMoveToY, lastMove.lastMoveToZ);
             if (remaining > 10.0f)
@@ -83,56 +57,142 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
         }
     }
 
-    // stuck check
-    float disToDest = bot->GetDistance(dest);
-    // Require a meaningful improvement (5yd) to reset the stuck counter.
-    // The old 1yd threshold was small enough that bots oscillating back
-    // and forth around an obstacle would keep "making progress" forever
-    // and never trigger the teleport recovery below.
-    if (disToDest + 5.0f < botAI->rpgInfo.nearestMoveFarDis)
+    if (IsWaitingForLastMove(MovementPriority::MOVEMENT_NORMAL))
     {
-        botAI->rpgInfo.nearestMoveFarDis = disToDest;
-        botAI->rpgInfo.stuckTs = getMSTime();
-        botAI->rpgInfo.stuckAttempts = 0;
-    }
-    else if (++botAI->rpgInfo.stuckAttempts >= 5 && GetMSTimeDiffToNow(botAI->rpgInfo.stuckTs) >= stuckTime)
-    {
-        // No meaningful progress toward dest for `stuckTime`: fall
-        // back to teleporting directly so the bot can get on with
-        // its RPG objective instead of oscillating indefinitely.
-        botAI->rpgInfo.stuckTs = getMSTime();
-        botAI->rpgInfo.stuckAttempts = 0;
-        const AreaTableEntry* entry = sAreaTableStore.LookupEntry(bot->GetZoneId());
-        std::string zone_name = PlayerbotAI::GetLocalizedAreaName(entry);
-        LOG_DEBUG(
-            "playerbots",
-            "[New RPG] Teleport {} from ({},{},{},{}) to ({},{},{},{}) as it stuck when moving far - Zone: {} ({})",
-            bot->GetName(), bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ(), bot->GetMapId(),
-            dest.GetPositionX(), dest.GetPositionY(), dest.GetPositionZ(), dest.GetMapId(), bot->GetZoneId(),
-            zone_name);
-        bot->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_TELEPORTED | AURA_INTERRUPT_FLAG_CHANGE_MAP);
-        return bot->TeleportTo(dest);
+        return true;
     }
 
+    float disToDest = bot->GetDistance(dest);
     float dis = bot->GetExactDist(dest);
+
+    auto debugMove = [&](std::string const& method)
+    {
+        if (!botAI->HasStrategy("debug move", BOT_STATE_NON_COMBAT))
+            return;
+        std::string targetName = "-";
+        auto resolveName = [&](ObjectGuid guid) -> std::string
+        {
+            if (!guid)
+                return "";
+            if (WorldObject* obj = botAI->GetWorldObject(guid))
+                return obj->GetName();
+            return "";
+        };
+        NewRpgInfo& info = botAI->rpgInfo;
+        NewRpgStatus status = info.GetStatus();
+        char const* statusName =
+            status == RPG_IDLE ? "idle" :
+            status == RPG_GO_GRIND ? "go-grind" :
+            status == RPG_GO_CAMP ? "go-camp" :
+            status == RPG_WANDER_NPC ? "wander-npc" :
+            status == RPG_WANDER_RANDOM ? "wander-random" :
+            status == RPG_REST ? "rest" :
+            status == RPG_DO_QUEST ? "do-quest" :
+            status == RPG_TRAVEL_FLIGHT ? "travel-flight" :
+            status == RPG_OUTDOOR_PVP ? "outdoor-pvp" : "?";
+        switch (status)
+        {
+            case RPG_DO_QUEST:
+                if (auto* data = std::get_if<NewRpgInfo::DoQuest>(&info.data))
+                {
+                    ObjectGuid guid = data->pursuedLootGO ? data->pursuedLootGO
+                                    : data->pursuedUseGO ? data->pursuedUseGO
+                                    : data->pursuedUseTarget;
+                    std::string n = resolveName(guid);
+                    if (!n.empty())
+                        targetName = n;
+                    else if (data->quest)
+                    {
+                        bool turnIn = data->questId &&
+                            bot->GetQuestStatus(data->questId) == QUEST_STATUS_COMPLETE;
+                        if (turnIn)
+                        {
+                            std::ostringstream t;
+                            t << "turn-in:" << data->quest->GetTitle() << "(" << data->questId << ")";
+                            targetName = t.str();
+                        }
+                        else
+                        {
+                            // first incomplete objective: mob / GO / item
+                            Quest const* q = data->quest;
+                            QuestStatusData const& qs = bot->getQuestStatusMap().at(data->questId);
+                            std::string goal;
+                            for (int i = 0; i < QUEST_OBJECTIVES_COUNT; ++i)
+                            {
+                                int32 entry = q->RequiredNpcOrGo[i];
+                                if (entry != 0 && qs.CreatureOrGOCount[i] < q->RequiredNpcOrGoCount[i])
+                                {
+                                    if (entry > 0)
+                                    {
+                                        if (CreatureTemplate const* ct = sObjectMgr->GetCreatureTemplate(entry))
+                                            goal = "mob:" + ct->Name;
+                                    }
+                                    else
+                                    {
+                                        if (GameObjectTemplate const* gt = sObjectMgr->GetGameObjectTemplate(-entry))
+                                            goal = "go:" + gt->name;
+                                    }
+                                    break;
+                                }
+                                uint32 item = q->RequiredItemId[i];
+                                if (item && bot->GetItemCount(item, true) < q->RequiredItemCount[i])
+                                {
+                                    if (ItemTemplate const* it = sObjectMgr->GetItemTemplate(item))
+                                        goal = "item:" + it->Name1;
+                                    break;
+                                }
+                            }
+                            if (goal.empty())
+                            {
+                                std::ostringstream t;
+                                t << "quest:" << q->GetTitle() << "(" << data->questId << ")";
+                                goal = t.str();
+                            }
+                            targetName = goal;
+                        }
+                    }
+                }
+                break;
+            case RPG_WANDER_NPC:
+                if (auto* data = std::get_if<NewRpgInfo::WanderNpc>(&info.data))
+                {
+                    std::string n = resolveName(data->npcOrGo);
+                    if (!n.empty())
+                        targetName = "npc:" + n;
+                }
+                break;
+            case RPG_TRAVEL_FLIGHT:
+                if (auto* data = std::get_if<NewRpgInfo::TravelFlight>(&info.data))
+                {
+                    std::string n = resolveName(data->fromFlightMaster);
+                    if (!n.empty())
+                        targetName = "flightmaster:" + n;
+                }
+                break;
+            case RPG_GO_GRIND: targetName = "grind-pos"; break;
+            case RPG_GO_CAMP: targetName = "camp-pos"; break;
+            case RPG_WANDER_RANDOM: targetName = "wander-random"; break;
+            default: break;
+        }
+        std::ostringstream out;
+        out << "[MOVE] type=" << method << " | state=" << statusName << " | dist=" << dis << "y"
+            << " | loc=(" << dest.GetPositionX() << "," << dest.GetPositionY() << "," << dest.GetPositionZ() << ")"
+            << " | target=" << targetName;
+        botAI->TellMasterNoFacing(out);
+    };
+
+    // short range: spline straight. obstacles this close are rare enough
+    // that mmap isn't worth the cost; beyond pathFinderDis we always mmap.
     if (dis < pathFinderDis)
     {
+        debugMove("spline");
         return MoveTo(dest.GetMapId(), dest.GetPositionX(), dest.GetPositionY(), dest.GetPositionZ(), false, false,
                       false, true);
     }
 
     const uint32 typeOk = PATHFIND_NORMAL | PATHFIND_INCOMPLETE | PATHFIND_FARFROMPOLY;
 
-    // Primary strategy: ask mmap for a route to the TRUE destination.
-    // If mmap can reach it directly (PATHFIND_NORMAL) or partially
-    // (PATHFIND_INCOMPLETE — destinations beyond the smooth-path cap
-    // of ~296 yards, or where local geometry blocks the final step),
-    // walk to the furthest reachable waypoint mmap computed. This
-    // lets bots follow the real route around obstacles (mountains,
-    // cave walls, cliffs) instead of trying to cut straight through.
-    // The spline system walks the whole returned path smoothly, so
-    // subsequent ticks early-out via IsWaitingForLastMove and no
-    // further PathGenerator calls fire until the bot arrives.
+    // real mmap route: walk to the furthest reachable point
     {
         PathGenerator path(bot);
         path.CalculatePath(dest.GetPositionX(), dest.GetPositionY(), dest.GetPositionZ());
@@ -141,24 +201,17 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
         if (canReach)
         {
             const G3D::Vector3& endPos = path.GetActualEndPosition();
-            // Only commit if the mmap endpoint actually makes progress
-            // toward the destination. For pathological INCOMPLETE
-            // results (e.g. disconnected polys that still report
-            // INCOMPLETE) the endpoint can land right under the bot;
-            // fall through to cone sampling in that case.
+            // skip if the endpoint barely moves us (disconnected poly)
             float endDistToDest = dest.GetExactDist(endPos.x, endPos.y, endPos.z);
             if (endDistToDest + 5.0f < disToDest)
             {
+                debugMove("mmap");
                 return MoveTo(bot->GetMapId(), endPos.x, endPos.y, endPos.z, false, false, false, true);
             }
         }
     }
 
-    // Fallback: mmap couldn't route to the destination. Sample the
-    // forward cone for a reachable stepping stone so the bot keeps
-    // moving and can try again from a new vantage point. Cap at 2
-    // samples — we already spent one PathGenerator call above and at
-    // 3000 bots every extra CalculatePath matters.
+    // mmap failed: try 2 stepping stones in the forward cone.
     float minDelta = M_PI;
     const float x = bot->GetPositionX();
     const float y = bot->GetPositionY();
@@ -181,8 +234,8 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
 
         if (canReach && fabs(delta) <= minDelta)
         {
-            found = true;
             const G3D::Vector3& endPos = path.GetActualEndPosition();
+            found = true;
             rx = endPos.x;
             ry = endPos.y;
             rz = endPos.z;
@@ -191,8 +244,10 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
     }
     if (found)
     {
+        debugMove("cone");
         return MoveTo(bot->GetMapId(), rx, ry, rz, false, false, false, true);
     }
+    debugMove("FAILED");
     return false;
 }
 
@@ -240,11 +295,7 @@ bool NewRpgBaseAction::MoveRandomNear(float moveStep, MovementPriority priority,
     const float x = bot->GetPositionX();
     const float y = bot->GetPositionY();
     const float z = bot->GetPositionZ();
-    // Previously: attempts = 1. A single random sample often landed in
-    // water / blocked geometry / unreachable poly, the function returned
-    // false, and the caller had no fallback — bot stood still. Retry a
-    // handful of times with a fresh distance each loop so a bad roll
-    // doesn't lock the bot in place.
+    // retry — a single sample often lands in water / blocked geometry
     for (int attempt = 0; attempt < 8; ++attempt)
     {
         float distance = (0.4f + rand_norm() * 0.6f) * moveStep;
