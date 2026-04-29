@@ -129,6 +129,7 @@ bool MovementAction::MoveToLOS(WorldObject* target, bool ranged)
 
     // Use standard PathGenerator to find a route.
     PathGenerator path(bot);
+    path.SetUseRaycast(true);
     path.CalculatePath(x, y, z, false);
     PathType type = path.GetPathType();
     if (type != PATHFIND_NORMAL && type != PATHFIND_INCOMPLETE)
@@ -834,6 +835,7 @@ bool MovementAction::ReachCombatTo(Unit* target, float distance)
         return false;
 
     PathGenerator path(bot);
+    path.SetUseRaycast(true);
     path.CalculatePath(tx, ty, tz, false);
     PathType type = path.GetPathType();
     int typeOk = PATHFIND_NORMAL | PATHFIND_INCOMPLETE | PATHFIND_SHORTCUT;

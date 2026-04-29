@@ -200,6 +200,7 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
     // real mmap route: walk to the furthest reachable point
     {
         PathGenerator path(bot);
+        path.SetUseRaycast(true);
         path.CalculatePath(dest.GetPositionX(), dest.GetPositionY(), dest.GetPositionZ());
         PathType type = path.GetPathType();
         bool canReach = !(type & (~typeOk));
@@ -321,6 +322,7 @@ bool NewRpgBaseAction::MoveRandomNear(float moveStep, MovementPriority priority,
         float dz = z;
 
         PathGenerator path(bot);
+        path.SetUseRaycast(true);
         path.CalculatePath(dx, dy, dz);
         PathType type = path.GetPathType();
         uint32 typeOk = PATHFIND_NORMAL | PATHFIND_INCOMPLETE | PATHFIND_FARFROMPOLY;
