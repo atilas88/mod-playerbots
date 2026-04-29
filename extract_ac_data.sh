@@ -70,7 +70,7 @@ mmapsConfig:
     #
     # Vanilla WotLK uses 6, which allows creatures to "jump" over fences.
     # Classic WotLK uses 4, which forces creatures to walk around fences.
-    walkableClimb: 4
+    walkableClimb: 6
 
     # Minimum distance (in cell units) around walkable surfaces.
     # Helps prevent NPCs from clipping into walls and narrow gaps.
@@ -79,18 +79,13 @@ mmapsConfig:
 
     # Number of vertices along one edge of the entire map's navmesh grid.
     # Higher values increase mesh resolution but also CPU/memory usage.
-    # NOTE: parser key is singular (vertexPerMapEdge, see Config.cpp:205);
-    # the AC upstream YAML uses the plural form which is silently ignored.
-    # 2000 = ac-stock; finer mesh produces more thin-wall polys at WMO
-    # boundaries that mmap can misconnect (cause of tree-house glitches).
-    vertexPerMapEdge: 2000
+    vertexPerMapEdge: 3000
 
     # Number of vertices along one edge of each tile chunk.
     # Must divide (vertexPerMapEdge - 1) evenly for seamless tiles.
     # A higher vertex count per tile means fewer total tiles,
     # reducing runtime work to load, unload, and manage tiles.
-    # NOTE: parser key is singular (vertexPerTileEdge, see Config.cpp:206).
-    vertexPerTileEdge: 80
+    vertexPerTileEdge: 300
 
     # Tolerance for how much a polygon can deviate from the original geometry when simplified.
     # Higher values produce simpler (faster) meshes but can reduce accuracy.
