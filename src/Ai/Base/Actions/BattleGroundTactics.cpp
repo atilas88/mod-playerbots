@@ -4291,9 +4291,13 @@ bool ArenaTactics::Execute(Event /*event*/)
 
         if (losBlocked)
         {
+            float tx = target->GetPositionX();
+            float ty = target->GetPositionY();
+            float tz = target->GetPositionZ();
+            SnapDestToNavMesh(bot, tx, ty, tz);
             PathGenerator path(bot);
             path.SetUseRaycast(true);
-            path.CalculatePath(target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), false);
+            path.CalculatePath(tx, ty, tz, false);
 
             if (path.GetPathType() != PATHFIND_NOPATH)
             {

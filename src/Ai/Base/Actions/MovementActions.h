@@ -28,6 +28,13 @@ public:
     MovementAction(PlayerbotAI* botAI, std::string const name);
 
 protected:
+    // Snap a target position to the nearest walkable navmesh poly. (x,y,z) is
+    // updated on success; unchanged on failure. Searches with wider extents
+    // than PathGenerator's hardcoded 3y horizontal so destinations slightly
+    // off-mesh (narrow ledges, riverbanks) still resolve to a valid poly
+    // instead of returning PATHFIND_NOPATH.
+    static bool SnapDestToNavMesh(Player* bot, float& x, float& y, float& z);
+
     bool JumpTo(uint32 mapId, float x, float y, float z, MovementPriority priority = MovementPriority::MOVEMENT_NORMAL);
     bool MoveNear(uint32 mapId, float x, float y, float z, float distance = sPlayerbotAIConfig.contactDistance,
                   MovementPriority priority = MovementPriority::MOVEMENT_NORMAL);
