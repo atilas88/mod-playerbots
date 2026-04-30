@@ -45,37 +45,6 @@ MovementAction::MovementAction(PlayerbotAI* botAI, std::string const name) : Act
     bot = botAI->GetBot();
 }
 
-bool MovementAction::SnapDestToNavMesh(Player* bot, float& x, float& y, float& z)
-{
-    if (!bot || !bot->GetMap())
-        return false;
-
-    dtNavMeshQuery const* navQuery = bot->GetMap()->GetMapCollisionData().GetMMapData().GetNavMeshQuery();
-    if (!navQuery)
-        return false;
-
-    // Detour coordinate order in AC is (y, z, x).
-    float point[VERTEX_SIZE] = { y, z, x };
-    // Wider than PathGenerator's hardcoded 3y horizontal extent so we catch
-    // destinations near narrow ledges, riverbanks, doorway thresholds.
-    float extents[VERTEX_SIZE] = { 5.0f, 5.0f, 5.0f };
-
-    dtQueryFilter filter;
-    filter.setIncludeFlags(NAV_GROUND | NAV_WATER | NAV_MAGMA);
-    filter.setExcludeFlags(0);
-
-    dtPolyRef polyRef = INVALID_POLYREF;
-    float closestPoint[VERTEX_SIZE] = { 0.0f, 0.0f, 0.0f };
-    if (dtStatusSucceed(navQuery->findNearestPoly(point, extents, &filter, &polyRef, closestPoint)) && polyRef != INVALID_POLYREF)
-    {
-        x = closestPoint[2];
-        y = closestPoint[0];
-        z = closestPoint[1];
-        return true;
-    }
-    return false;
-}
-
 void MovementAction::CreateWp(Player* wpOwner, float x, float y, float z, float o, uint32 entry, bool important)
 {
     float dist = wpOwner->GetDistance(x, y, z);
@@ -157,10 +126,6 @@ bool MovementAction::MoveToLOS(WorldObject* target, bool ranged)
     float x = target->GetPositionX();
     float y = target->GetPositionY();
     float z = target->GetPositionZ();
-
-    // Snap to nearest walkable poly so slightly off-mesh targets resolve to
-    // a valid endPoly instead of returning PATHFIND_NOPATH.
-    SnapDestToNavMesh(bot, x, y, z);
 
     // Use standard PathGenerator to find a route.
     PathGenerator path(bot);
@@ -869,7 +834,6 @@ bool MovementAction::ReachCombatTo(Unit* target, float distance)
     if (bot->GetExactDist(tx, ty, tz) <= distance)
         return false;
 
-    SnapDestToNavMesh(bot, tx, ty, tz);
     PathGenerator path(bot);
     path.SetUseRaycast(true);
     path.CalculatePath(tx, ty, tz, false);

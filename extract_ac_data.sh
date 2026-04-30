@@ -62,8 +62,7 @@ mmapsConfig:
     # Minimum ceiling height (in cell units) NPCs need to pass under an obstacle.
     # Controls how much vertical clearance is required.
     # To convert to world units, multiply by cellSize (see "Cell Size Calculation").
-    # 9 cells × 0.178 yd ≈ 1.60 yd — matches WoW player height at 3000 resolution.
-    walkableHeight: 9
+    walkableHeight: 6
 
     # Maximum height difference (in cell units) NPCs can step up or down.
     # Higher values allow walking over fences, ledges, or steps.
@@ -71,13 +70,12 @@ mmapsConfig:
     #
     # Vanilla WotLK uses 6, which allows creatures to "jump" over fences.
     # Classic WotLK uses 4, which forces creatures to walk around fences.
-    walkableClimb: 4
+    walkableClimb: 6
 
     # Minimum distance (in cell units) around walkable surfaces.
     # Helps prevent NPCs from clipping into walls and narrow gaps.
     # To convert to world units, multiply by cellSize (see "Cell Size Calculation").
-    # 3 cells × 0.178 yd ≈ 0.53 yd — matches WoW player collision radius at 3000.
-    walkableRadius: 3
+    walkableRadius: 2
 
     # Number of vertices along one edge of the entire map's navmesh grid.
     # Higher values increase mesh resolution but also CPU/memory usage.
@@ -87,7 +85,7 @@ mmapsConfig:
     # Must divide (vertexPerMapEdge - 1) evenly for seamless tiles.
     # A higher vertex count per tile means fewer total tiles,
     # reducing runtime work to load, unload, and manage tiles.
-    vertexPerTileEdge: 600
+    vertexPerTileEdge: 300
 
     # Tolerance for how much a polygon can deviate from the original geometry when simplified.
     # Higher values produce simpler (faster) meshes but can reduce accuracy.
@@ -251,10 +249,6 @@ fi
 if [ "$EXTRACT_DBC_AND_MAPS" = true ]; then
     echo
     echo "[1/3] Extracting DBCs + Maps..."
-    # Clean slate — map_extractor refuses to run if these dirs already exist.
-    safe_rm dbc
-    safe_rm maps
-    safe_rm Cameras
     # -e 7 = bitfield MAP(1)|DBC(2)|CAMERA(4) — extract everything.
     # The old "-e 2" was DBC-only and skipped maps + cameras entirely.
     "$TOOLS_DIR/map_extractor" -e 7 -f 0
@@ -268,9 +262,6 @@ fi
 if [ "$EXTRACT_VMAPS" = true ]; then
     echo
     echo "[2/3] Extracting VMaps..."
-    # Clean slate — vmap4_extractor refuses to run if these dirs already exist.
-    safe_rm Buildings
-    safe_rm vmaps
     "$TOOLS_DIR/vmap4_extractor" -l -d ./Data
     mkdir -p vmaps
     "$TOOLS_DIR/vmap4_assembler" Buildings vmaps
