@@ -15,6 +15,7 @@
 
 #include "BattleGroundTactics.h"
 #include "Chat.h"
+#include "GankerScheduler.h"
 #include "GuildTaskMgr.h"
 #include "PerfMonitor.h"
 #include "PlayerbotMgr.h"
@@ -30,6 +31,10 @@ public:
 
     ChatCommandTable GetCommands() const override
     {
+        static ChatCommandTable playerbotsGankerCommandTable = {
+            {"status", HandleGankerStatusCommand, SEC_GAMEMASTER, Console::Yes},
+        };
+
         static ChatCommandTable playerbotsDebugCommandTable = {
             {"bg", HandleDebugBGCommand, SEC_GAMEMASTER, Console::Yes},
         };
@@ -46,6 +51,7 @@ public:
             {"gtask", HandleGuildTaskCommand, SEC_GAMEMASTER, Console::Yes},
             {"pmon", HandlePerfMonCommand, SEC_GAMEMASTER, Console::Yes},
             {"rndbot", HandleRandomPlayerbotCommand, SEC_GAMEMASTER, Console::Yes},
+            {"ganker", playerbotsGankerCommandTable},
             {"debug", playerbotsDebugCommandTable},
             {"account", playerbotsAccountCommandTable},
         };
@@ -109,6 +115,14 @@ public:
     static bool HandleDebugBGCommand(ChatHandler* handler, char const* args)
     {
         return BGTactics::HandleConsoleCommand(handler, args);
+    }
+
+    static bool HandleGankerStatusCommand(ChatHandler* handler, char const* /*args*/)
+    {
+        std::vector<std::string> lines = sRandomPlayerbotMgr.GetGankerScheduler().GetStatusReport();
+        for (std::string const& line : lines)
+            handler->PSendSysMessage("{}", line.c_str());
+        return true;
     }
 
     static bool HandleSetSecurityKeyCommand(ChatHandler* handler, char const* args)

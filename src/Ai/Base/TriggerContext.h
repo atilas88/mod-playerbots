@@ -8,6 +8,7 @@
 
 #include "CureTriggers.h"
 #include "FishingTriggers.h"
+#include "GankerTriggers.h"
 #include "GenericTriggers.h"
 #include "GuildTriggers.h"
 #include "LfgTriggers.h"
@@ -235,6 +236,13 @@ public:
         creators["do quest status"] = &TriggerContext::do_quest_status;
         creators["travel flight status"] = &TriggerContext::travel_flight_status;
         creators["outdoor pvp status"] = &TriggerContext::outdoor_pvp_status;
+        creators["ganker target lost"] = &TriggerContext::ganker_target_lost;
+        creators["ganker target out of range"] = &TriggerContext::ganker_target_out_of_range;
+        creators["ganker target dead"] = &TriggerContext::ganker_target_dead;
+        creators["ganker camp expired"] = &TriggerContext::ganker_camp_expired;
+        creators["ganker self dead"] = &TriggerContext::ganker_self_dead;
+        creators["ganker revive ready"] = &TriggerContext::ganker_revive_ready;
+        creators["ganker should retreat"] = &TriggerContext::ganker_should_retreat;
         creators["can self resurrect"] = &TriggerContext::can_self_resurrect;
         creators["can fish"] = &TriggerContext::can_fish;
         creators["can use fishing bobber"] = &TriggerContext::can_use_fishing_bobber;
@@ -445,6 +453,13 @@ private:
     static Trigger* do_quest_status(PlayerbotAI* botAI) { return new NewRpgStatusTrigger(botAI, RPG_DO_QUEST); }
     static Trigger* travel_flight_status(PlayerbotAI* botAI) { return new NewRpgStatusTrigger(botAI, RPG_TRAVEL_FLIGHT); }
     static Trigger* outdoor_pvp_status(PlayerbotAI* botAI) { return new NewRpgStatusTrigger(botAI, RPG_OUTDOOR_PVP); }
+    static Trigger* ganker_target_lost(PlayerbotAI* botAI) { return new GankerTargetLostTrigger(botAI); }
+    static Trigger* ganker_target_out_of_range(PlayerbotAI* botAI) { return new GankerTargetOutOfRangeTrigger(botAI); }
+    static Trigger* ganker_target_dead(PlayerbotAI* botAI) { return new GankerTargetDeadTrigger(botAI); }
+    static Trigger* ganker_camp_expired(PlayerbotAI* botAI) { return new GankerCampExpiredTrigger(botAI); }
+    static Trigger* ganker_self_dead(PlayerbotAI* botAI) { return new GankerSelfDeadTrigger(botAI); }
+    static Trigger* ganker_revive_ready(PlayerbotAI* botAI) { return new GankerReviveReadyTrigger(botAI); }
+    static Trigger* ganker_should_retreat(PlayerbotAI* botAI) { return new GankerShouldRetreatTrigger(botAI); }
     static Trigger* can_self_resurrect(PlayerbotAI* ai) { return new SelfResurrectTrigger(ai); }
     static Trigger* can_fish(PlayerbotAI* ai) { return new CanFishTrigger(ai); }
     static Trigger* can_use_fishing_bobber(PlayerbotAI* ai) { return new CanUseFishingBobberTrigger(ai); }

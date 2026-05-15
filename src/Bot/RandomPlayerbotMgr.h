@@ -6,6 +6,7 @@
 #ifndef _PLAYERBOT_RANDOMPLAYERBOTMGR_H
 #define _PLAYERBOT_RANDOMPLAYERBOTMGR_H
 
+#include "GankerScheduler.h"
 #include "NewRpgInfo.h"
 #include "ObjectGuid.h"
 #include "PlayerbotMgr.h"
@@ -168,6 +169,8 @@ public:
     void Init();
     std::map<uint8, std::unordered_set<ObjectGuid>> addclassCache;
 
+    GankerScheduler& GetGankerScheduler() { return gankerScheduler; }
+
     // Account type management
     void AssignAccountTypes();
     bool IsAccountType(uint32 accountId, uint8 accountType);
@@ -253,6 +256,8 @@ private:
     // Account lists
     std::vector<uint32> rndBotTypeAccounts;             // Accounts marked as RNDbot (type 1)
     std::vector<uint32> addClassTypeAccounts;           // Accounts marked as AddClass (type 2)
+
+    GankerScheduler gankerScheduler;
 
     //void ScaleBotActivity();      // Deprecated function
     static inline uint32 NowSeconds() { return static_cast<uint32>(GameTime::GetGameTime().count()); }
