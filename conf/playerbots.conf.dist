@@ -2440,3 +2440,88 @@ AiPlayerbot.SummonAtInnkeepersEnabled = 1
 # Buffs will be applied on PP, Sindragosa and Lich King
 
 AiPlayerbot.EnableICCBuffs = 1
+
+###############################################################################
+# Ganker system (M1 + M2 + M3)
+#
+# Spawns existing random bots as PvP gankers against your real character when
+# you are PvP-flagged in a contested zone (Stranglethorn, Tanaris, etc.).
+# Bots are pulled from the random pool, no dedicated spawning. Disabled by
+# default - opt in by setting Enabled = 1.
+###############################################################################
+
+# Master switch.
+AiPlayerbot.Ganker.Enabled = 0
+
+# How often (seconds) the scheduler evaluates eligible victims.
+AiPlayerbot.Ganker.SchedulerIntervalSeconds = 30
+
+# Cooldown range (seconds) before the same victim can be ganked again.
+AiPlayerbot.Ganker.MinSecondsBetweenAttempts = 300
+AiPlayerbot.Ganker.MaxSecondsBetweenAttempts = 900
+
+# Probability (0-100) that, once cooldown clears, a gank actually triggers.
+# Lower values produce more variety/unpredictability.
+AiPlayerbot.Ganker.SpawnChancePercent = 60
+
+# Level offset relative to the victim. Default: 2 levels below up to 5 above.
+AiPlayerbot.Ganker.LevelOffsetMin = -2
+AiPlayerbot.Ganker.LevelOffsetMax = 5
+
+# Class roulette weights (rogue/hunter/mage favored, paladin/dk/priest rare).
+AiPlayerbot.Ganker.WeightWarrior = 5
+AiPlayerbot.Ganker.WeightPaladin = 3
+AiPlayerbot.Ganker.WeightHunter = 25
+AiPlayerbot.Ganker.WeightRogue = 30
+AiPlayerbot.Ganker.WeightPriest = 2
+AiPlayerbot.Ganker.WeightDeathKnight = 2
+AiPlayerbot.Ganker.WeightShaman = 3
+AiPlayerbot.Ganker.WeightMage = 15
+AiPlayerbot.Ganker.WeightWarlock = 8
+AiPlayerbot.Ganker.WeightDruid = 7
+
+# Distance (yards) at which the bot is teleported behind the victim and at
+# which it engages combat. 35yd is just inside the natural aggro radius (60yd
+# outdoor) so the bot pipeline picks up the victim as enemy player target.
+AiPlayerbot.Ganker.EngagementRadiusYards = 35.0
+
+# If the bot ends up further than this from the victim, the gank is aborted
+# (target lost) and the bot returns to NewRpg.
+AiPlayerbot.Ganker.MaxPursueDistanceYards = 200.0
+
+# Concurrency caps (server-wide).
+AiPlayerbot.Ganker.MaxConcurrentVictims = 4
+AiPlayerbot.Ganker.MaxConcurrentGankers = 8
+
+# If 1, only zones listed in ContestedZoneIds are valid gank targets.
+# If 0, any zone whose AreaTableEntry::team == AREATEAM_NONE is valid.
+AiPlayerbot.Ganker.UseClassicZoneList = 1
+
+# Default classic 1-60 contested zones (Stranglethorn, Tanaris, Arathi,
+# Hillsbrad, Ashenvale, etc.).
+AiPlayerbot.Ganker.ContestedZoneIds = "33,440,3,51,46,267,45,405,406,400,357,490,1377,618,139,28,47,16,361"
+
+# Probability (0-100) that a gank attempt sends a pair (2 bots) instead of 1.
+# If the requested pair count is unavailable, the gank falls back to 1 bot.
+AiPlayerbot.Ganker.PairProbabilityPercent = 30
+
+# Camp duration over the victim's corpse (seconds). After the kill the
+# bot(s) stay on the corpse facing it, with periodic /rude or /laugh
+# emotes, until this timer expires. If the victim revives flagged within
+# the window, combat re-engages automatically.
+AiPlayerbot.Ganker.CampDurationMinSeconds = 30
+AiPlayerbot.Ganker.CampDurationMaxSeconds = 90
+
+# Revive cycle (M3). When the ganker is killed by the victim, the bot
+# stays dead (no spirit release) for a random delay in this range, then
+# resurrects in place behind the victim with full HP/mana and resumes
+# the chase. Each death increments a counter.
+AiPlayerbot.Ganker.RevivalDelayMinSeconds = 15
+AiPlayerbot.Ganker.RevivalDelayMaxSeconds = 45
+
+# After this many deaths on the same victim, the ganker retreats: it
+# releases its spirit through the normal flow and the victim gets an
+# extended cooldown (MaxSecondsBetweenAttempts * RetreatCooldownMultiplier)
+# before being eligible again.
+AiPlayerbot.Ganker.MaxDeathsBeforeRetreat = 2
+AiPlayerbot.Ganker.RetreatCooldownMultiplier = 3.0

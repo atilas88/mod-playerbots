@@ -78,6 +78,7 @@ public:
     bool IsPvpProhibited(uint32 zoneId, uint32 areaId);
     bool IsInPvpProhibitedZone(uint32 id);
     bool IsInPvpProhibitedArea(uint32 id);
+    bool IsContestedZone(uint32 zoneId);
 
     bool enabled;
     bool disabledWithoutRealPlayer;
@@ -284,6 +285,38 @@ public:
     std::vector<uint32> pvpProhibitedZoneIds;
     std::vector<uint32> pvpProhibitedAreaIds;
     bool fastReactInBG;
+
+    // Ganker system (M1 — dispatch + pursue + engage; M2 — kill/camp + pairs)
+    bool gankerEnabled;
+    uint32 gankerSchedulerIntervalSeconds;
+    uint32 gankerMinSecondsBetweenAttempts;
+    uint32 gankerMaxSecondsBetweenAttempts;
+    uint32 gankerSpawnChancePercent;
+    int32 gankerLevelOffsetMin;
+    int32 gankerLevelOffsetMax;
+    uint32 gankerWeightWarrior;
+    uint32 gankerWeightPaladin;
+    uint32 gankerWeightHunter;
+    uint32 gankerWeightRogue;
+    uint32 gankerWeightPriest;
+    uint32 gankerWeightDeathKnight;
+    uint32 gankerWeightShaman;
+    uint32 gankerWeightMage;
+    uint32 gankerWeightWarlock;
+    uint32 gankerWeightDruid;
+    float gankerEngagementRadiusYards;
+    float gankerMaxPursueDistanceYards;
+    uint32 gankerMaxConcurrentVictims;
+    uint32 gankerMaxConcurrentGankers;
+    bool gankerUseClassicZoneList;
+    std::vector<uint32> gankerContestedZoneIds;
+    uint32 gankerPairProbabilityPercent;
+    uint32 gankerCampDurationMinSeconds;
+    uint32 gankerCampDurationMaxSeconds;
+    uint32 gankerRevivalDelayMinSeconds;
+    uint32 gankerRevivalDelayMaxSeconds;
+    uint32 gankerMaxDeathsBeforeRetreat;
+    float gankerRetreatCooldownMultiplier;
 
     bool randombotsWalkingRPG;
     bool randombotsWalkingRPGInDoors;

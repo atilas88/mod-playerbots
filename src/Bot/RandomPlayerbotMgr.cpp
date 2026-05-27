@@ -388,6 +388,11 @@ void RandomPlayerbotMgr::UpdateAIInternal(uint32 /*elapsed*/, bool /*minimal*/)
             sRandomPlayerbotMgr.CheckLfgQueue();
     }
 
+    if (sPlayerbotAIConfig.gankerEnabled && !players.empty())
+    {
+        gankerScheduler.Tick();
+    }
+
     if (sPlayerbotAIConfig.randomBotAutologin && time(nullptr) > (printStatsTimer + 300))
     {
         if (!printStatsTimer)
@@ -2509,6 +2514,9 @@ void RandomPlayerbotMgr::HandleCommand(uint32 type, std::string const text, Play
 void RandomPlayerbotMgr::OnPlayerLogout(Player* player)
 {
     DisablePlayerBot(player->GetGUID());
+
+    if (sPlayerbotAIConfig.gankerEnabled)
+        gankerScheduler.OnVictimGone(player->GetGUID());
 
     for (PlayerBotMap::const_iterator it = GetPlayerBotsBegin(); it != GetPlayerBotsEnd(); ++it)
     {

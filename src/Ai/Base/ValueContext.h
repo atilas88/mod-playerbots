@@ -27,6 +27,7 @@
 #include "DuelTargetValue.h"
 #include "EnemyHealerTargetValue.h"
 #include "EnemyPlayerValue.h"
+#include "GankerValues.h"
 #include "EstimatedLifetimeValue.h"
 #include "FishValues.h"
 #include "Formations.h"
@@ -142,6 +143,13 @@ public:
         creators["dps aoe target"] = &ValueContext::dps_aoe_target;
         creators["least hp target"] = &ValueContext::least_hp_target;
         creators["enemy player target"] = &ValueContext::enemy_player_target;
+        creators["ganker target guid"] = &ValueContext::ganker_target_guid;
+        creators["ganker target unit"] = &ValueContext::ganker_target_unit;
+        creators["ganker is temp group"] = &ValueContext::ganker_is_temp_group;
+        creators["ganker camp until"] = &ValueContext::ganker_camp_until;
+        creators["ganker next emote at"] = &ValueContext::ganker_next_emote_at;
+        creators["ganker death count"] = &ValueContext::ganker_death_count;
+        creators["ganker revive at"] = &ValueContext::ganker_revive_at;
         creators["cc target"] = &ValueContext::cc_target;
         creators["current cc target"] = &ValueContext::current_cc_target;
         creators["pet target"] = &ValueContext::pet_target;
@@ -465,6 +473,13 @@ private:
     static UntypedValue* dps_aoe_target(PlayerbotAI* botAI) { return new DpsAoeTargetValue(botAI); }
     static UntypedValue* least_hp_target(PlayerbotAI* botAI) { return new LeastHpTargetValue(botAI); }
     static UntypedValue* enemy_player_target(PlayerbotAI* botAI) { return new EnemyPlayerValue(botAI); }
+    static UntypedValue* ganker_target_guid(PlayerbotAI* botAI) { return new GankerTargetGuidValue(botAI); }
+    static UntypedValue* ganker_target_unit(PlayerbotAI* botAI) { return new GankerTargetUnitValue(botAI); }
+    static UntypedValue* ganker_is_temp_group(PlayerbotAI* botAI) { return new GankerIsTempGroupValue(botAI); }
+    static UntypedValue* ganker_camp_until(PlayerbotAI* botAI) { return new GankerCampUntilValue(botAI); }
+    static UntypedValue* ganker_next_emote_at(PlayerbotAI* botAI) { return new GankerNextEmoteAtValue(botAI); }
+    static UntypedValue* ganker_death_count(PlayerbotAI* botAI) { return new GankerDeathCountValue(botAI); }
+    static UntypedValue* ganker_revive_at(PlayerbotAI* botAI) { return new GankerReviveAtValue(botAI); }
     static UntypedValue* cc_target(PlayerbotAI* botAI) { return new CcTargetValue(botAI); }
     static UntypedValue* current_cc_target(PlayerbotAI* botAI) { return new CurrentCcTargetValue(botAI); }
     static UntypedValue* pet_target(PlayerbotAI* botAI) { return new PetTargetValue(botAI); }

@@ -6,6 +6,7 @@
 #include "PlayerbotAIConfig.h"
 #include <iostream>
 #include "Config.h"
+#include "DBCStores.h"
 #include "NewRpgInfo.h"
 #include "PlayerbotDungeonRepository.h"
 #include "PlayerbotFactory.h"
@@ -173,6 +174,59 @@ bool PlayerbotAIConfig::Initialize()
                                            "3973,4085,4086,4087,4088"),
         pvpProhibitedAreaIds);
     fastReactInBG = sConfigMgr->GetOption<bool>("AiPlayerbot.FastReactInBG", true);
+
+    // Ganker system (M1)
+    gankerEnabled = sConfigMgr->GetOption<bool>("AiPlayerbot.Ganker.Enabled", false);
+    gankerSchedulerIntervalSeconds =
+        sConfigMgr->GetOption<int32>("AiPlayerbot.Ganker.SchedulerIntervalSeconds", 30);
+    gankerMinSecondsBetweenAttempts =
+        sConfigMgr->GetOption<int32>("AiPlayerbot.Ganker.MinSecondsBetweenAttempts", 300);
+    gankerMaxSecondsBetweenAttempts =
+        sConfigMgr->GetOption<int32>("AiPlayerbot.Ganker.MaxSecondsBetweenAttempts", 900);
+    gankerSpawnChancePercent =
+        sConfigMgr->GetOption<int32>("AiPlayerbot.Ganker.SpawnChancePercent", 60);
+    gankerLevelOffsetMin = sConfigMgr->GetOption<int32>("AiPlayerbot.Ganker.LevelOffsetMin", -2);
+    gankerLevelOffsetMax = sConfigMgr->GetOption<int32>("AiPlayerbot.Ganker.LevelOffsetMax", 5);
+    gankerWeightWarrior = sConfigMgr->GetOption<int32>("AiPlayerbot.Ganker.WeightWarrior", 5);
+    gankerWeightPaladin = sConfigMgr->GetOption<int32>("AiPlayerbot.Ganker.WeightPaladin", 3);
+    gankerWeightHunter = sConfigMgr->GetOption<int32>("AiPlayerbot.Ganker.WeightHunter", 25);
+    gankerWeightRogue = sConfigMgr->GetOption<int32>("AiPlayerbot.Ganker.WeightRogue", 30);
+    gankerWeightPriest = sConfigMgr->GetOption<int32>("AiPlayerbot.Ganker.WeightPriest", 2);
+    gankerWeightDeathKnight =
+        sConfigMgr->GetOption<int32>("AiPlayerbot.Ganker.WeightDeathKnight", 2);
+    gankerWeightShaman = sConfigMgr->GetOption<int32>("AiPlayerbot.Ganker.WeightShaman", 3);
+    gankerWeightMage = sConfigMgr->GetOption<int32>("AiPlayerbot.Ganker.WeightMage", 15);
+    gankerWeightWarlock = sConfigMgr->GetOption<int32>("AiPlayerbot.Ganker.WeightWarlock", 8);
+    gankerWeightDruid = sConfigMgr->GetOption<int32>("AiPlayerbot.Ganker.WeightDruid", 7);
+    gankerEngagementRadiusYards =
+        sConfigMgr->GetOption<float>("AiPlayerbot.Ganker.EngagementRadiusYards", 35.0f);
+    gankerMaxPursueDistanceYards =
+        sConfigMgr->GetOption<float>("AiPlayerbot.Ganker.MaxPursueDistanceYards", 200.0f);
+    gankerMaxConcurrentVictims =
+        sConfigMgr->GetOption<int32>("AiPlayerbot.Ganker.MaxConcurrentVictims", 4);
+    gankerMaxConcurrentGankers =
+        sConfigMgr->GetOption<int32>("AiPlayerbot.Ganker.MaxConcurrentGankers", 8);
+    gankerUseClassicZoneList =
+        sConfigMgr->GetOption<bool>("AiPlayerbot.Ganker.UseClassicZoneList", true);
+    LoadList<std::vector<uint32>>(
+        sConfigMgr->GetOption<std::string>(
+            "AiPlayerbot.Ganker.ContestedZoneIds",
+            "33,440,3,51,46,267,45,405,406,400,357,490,1377,618,139,28,47,16,361"),
+        gankerContestedZoneIds);
+    gankerPairProbabilityPercent =
+        sConfigMgr->GetOption<int32>("AiPlayerbot.Ganker.PairProbabilityPercent", 30);
+    gankerCampDurationMinSeconds =
+        sConfigMgr->GetOption<int32>("AiPlayerbot.Ganker.CampDurationMinSeconds", 30);
+    gankerCampDurationMaxSeconds =
+        sConfigMgr->GetOption<int32>("AiPlayerbot.Ganker.CampDurationMaxSeconds", 90);
+    gankerRevivalDelayMinSeconds =
+        sConfigMgr->GetOption<int32>("AiPlayerbot.Ganker.RevivalDelayMinSeconds", 15);
+    gankerRevivalDelayMaxSeconds =
+        sConfigMgr->GetOption<int32>("AiPlayerbot.Ganker.RevivalDelayMaxSeconds", 45);
+    gankerMaxDeathsBeforeRetreat =
+        sConfigMgr->GetOption<int32>("AiPlayerbot.Ganker.MaxDeathsBeforeRetreat", 2);
+    gankerRetreatCooldownMultiplier =
+        sConfigMgr->GetOption<float>("AiPlayerbot.Ganker.RetreatCooldownMultiplier", 3.0f);
     LoadList<std::vector<uint32>>(
         sConfigMgr->GetOption<std::string>("AiPlayerbot.RandomBotQuestIds", "3802,5505,6502,7761,7848,10277,10285,11492,"
                                            "13188,13189,24499,24511,24710,24712"),
@@ -737,6 +791,18 @@ bool PlayerbotAIConfig::IsInPvpProhibitedZone(uint32 id)
 bool PlayerbotAIConfig::IsInPvpProhibitedArea(uint32 id)
 {
     return find(pvpProhibitedAreaIds.begin(), pvpProhibitedAreaIds.end(), id) != pvpProhibitedAreaIds.end();
+}
+
+bool PlayerbotAIConfig::IsContestedZone(uint32 zoneId)
+{
+    if (gankerUseClassicZoneList)
+    {
+        return find(gankerContestedZoneIds.begin(), gankerContestedZoneIds.end(), zoneId) !=
+               gankerContestedZoneIds.end();
+    }
+
+    AreaTableEntry const* zone = sAreaTableStore.LookupEntry(zoneId);
+    return zone && zone->team == 0;  // AREATEAM_NONE — neutral / contested
 }
 
 bool PlayerbotAIConfig::IsRestrictedHealerDPSMap(uint32 mapId) const

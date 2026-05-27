@@ -27,6 +27,7 @@
 #include "DestroyItemAction.h"
 #include "EmoteAction.h"
 #include "FollowActions.h"
+#include "GankerActions.h"
 #include "GenericActions.h"
 #include "GenericSpellActions.h"
 #include "GiveItemAction.h"
@@ -139,6 +140,12 @@ public:
         creators["attack anything"] = &ActionContext::attack_anything;
         creators["attack least hp target"] = &ActionContext::attack_least_hp_target;
         creators["attack enemy player"] = &ActionContext::attack_enemy_player;
+        creators["stalk ganker target"] = &ActionContext::stalk_ganker_target;
+        creators["pursue ganker target"] = &ActionContext::pursue_ganker_target;
+        creators["release ganker"] = &ActionContext::release_ganker;
+        creators["camp ganker corpse"] = &ActionContext::camp_ganker_corpse;
+        creators["ganker start revive timer"] = &ActionContext::ganker_start_revive_timer;
+        creators["ganker resurrect"] = &ActionContext::ganker_resurrect;
         creators["emote"] = &ActionContext::emote;
         creators["talk"] = &ActionContext::talk;
         creators["suggest what to do"] = &ActionContext::suggest_what_to_do;
@@ -341,6 +348,12 @@ private:
     static Action* attack_anything(PlayerbotAI* botAI) { return new AttackAnythingAction(botAI); }
     static Action* attack_least_hp_target(PlayerbotAI* botAI) { return new AttackLeastHpTargetAction(botAI); }
     static Action* attack_enemy_player(PlayerbotAI* botAI) { return new AttackEnemyPlayerAction(botAI); }
+    static Action* stalk_ganker_target(PlayerbotAI* botAI) { return new StalkGankerTargetAction(botAI); }
+    static Action* pursue_ganker_target(PlayerbotAI* botAI) { return new PursueGankerTargetAction(botAI); }
+    static Action* release_ganker(PlayerbotAI* botAI) { return new ReleaseGankerAction(botAI); }
+    static Action* camp_ganker_corpse(PlayerbotAI* botAI) { return new CampGankerCorpseAction(botAI); }
+    static Action* ganker_start_revive_timer(PlayerbotAI* botAI) { return new GankerStartReviveTimerAction(botAI); }
+    static Action* ganker_resurrect(PlayerbotAI* botAI) { return new GankerResurrectAction(botAI); }
     static Action* stay(PlayerbotAI* botAI) { return new StayAction(botAI); }
     static Action* sit(PlayerbotAI* botAI) { return new SitAction(botAI); }
     static Action* runaway(PlayerbotAI* botAI) { return new RunAwayAction(botAI); }

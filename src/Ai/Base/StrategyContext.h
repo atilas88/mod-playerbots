@@ -21,6 +21,7 @@
 #include "FleeStrategy.h"
 #include "FocusTargetStrategy.h"
 #include "FollowMasterStrategy.h"
+#include "GankerStrategy.h"
 #include "GrindingStrategy.h"
 #include "GroupStrategy.h"
 #include "GuardStrategy.h"
@@ -81,6 +82,8 @@ public:
         creators["focus"] = &StrategyContext::focus;
         creators["tell target"] = &StrategyContext::tell_target;
         creators["pvp"] = &StrategyContext::pvp;
+        creators["ganker"] = &StrategyContext::ganker;
+        creators["ganker dead"] = &StrategyContext::ganker_dead;
         creators["return"] = &StrategyContext::_return;
         creators["lfg"] = &StrategyContext::lfg;
         creators["custom"] = &StrategyContext::custom;
@@ -159,6 +162,8 @@ private:
     static Strategy* world_packet(PlayerbotAI* botAI) { return new WorldPacketHandlerStrategy(botAI); }
     static Strategy* ready_check(PlayerbotAI* botAI) { return new ReadyCheckStrategy(botAI); }
     static Strategy* pvp(PlayerbotAI* botAI) { return new AttackEnemyPlayersStrategy(botAI); }
+    static Strategy* ganker(PlayerbotAI* botAI) { return new GankerStrategy(botAI); }
+    static Strategy* ganker_dead(PlayerbotAI* botAI) { return new GankerDeadStrategy(botAI); }
     static Strategy* _return(PlayerbotAI* botAI) { return new ReturnStrategy(botAI); }
     static Strategy* lfg(PlayerbotAI* botAI) { return new LfgStrategy(botAI); }
     static Strategy* custom(PlayerbotAI* botAI) { return new CustomStrategy(botAI); }
