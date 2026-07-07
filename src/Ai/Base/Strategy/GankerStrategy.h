@@ -7,7 +7,7 @@
 #define _PLAYERBOT_GANKERSTRATEGY_H
 
 #include "NonCombatStrategy.h"
-#include "PassTroughStrategy.h"
+#include "PassThroughStrategy.h"
 
 class PlayerbotAI;
 
@@ -22,10 +22,10 @@ public:
     void InitMultipliers(std::vector<Multiplier*>& multipliers) override;
 };
 
-class GankerDeadStrategy : public PassTroughStrategy
+class GankerDeadStrategy : public PassThroughStrategy
 {
 public:
-    GankerDeadStrategy(PlayerbotAI* botAI) : PassTroughStrategy(botAI) {}
+    GankerDeadStrategy(PlayerbotAI* botAI) : PassThroughStrategy(botAI) {}
 
     std::string const getName() override { return "ganker dead"; }
     void InitTriggers(std::vector<TriggerNode*>& triggers) override;

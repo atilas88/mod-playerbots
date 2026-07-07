@@ -109,7 +109,7 @@ void GankerStrategy::InitMultipliers(std::vector<Multiplier*>& multipliers)
 
 void GankerDeadStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 {
-    PassTroughStrategy::InitTriggers(triggers);
+    PassThroughStrategy::InitTriggers(triggers);
 
     triggers.push_back(
         new TriggerNode("ganker should retreat", { NextAction("release ganker", 95.0f) }));
