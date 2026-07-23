@@ -71,10 +71,10 @@ bool ReleaseGankerAction::Execute(Event /*event*/)
 
     if (isTempGroup && bot->GetGroup())
     {
-        Group* group = bot->GetGroup();
-        group->RemoveMember(bot->GetGUID());
-        if (group->GetMembersCount() < 2)
-            group->Disband();
+        // RemoveMember disbands (and frees) the group itself when it drops below 2
+        // members, which a temp ganking pair always does. Do NOT touch the Group*
+        // afterwards — it may already be deleted.
+        bot->GetGroup()->RemoveMember(bot->GetGUID());
     }
 
     sRandomPlayerbotMgr.GetGankerScheduler().OnGankerReleased(bot->GetGUID(), retreat);
