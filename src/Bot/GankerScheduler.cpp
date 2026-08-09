@@ -157,6 +157,16 @@ bool GankerScheduler::IsEligibleVictim(Player* victim, std::string* reason) cons
     if (!sPlayerbotAIConfig.IsContestedZone(zoneId))
         return fail("not a contested zone");
 
+    // Wintergrasp is contested (AREATEAM_NONE) and flags everyone inside for PvP,
+    // so without this every participant reads as a valid victim and the scheduler
+    // would dump gankers into a running battle. Keyed off the DBC flag rather than
+    // zone 4197 so the subzones are covered too. Deliberately not added to
+    // PvpProhibitedZoneIds: that list also gates AttackAction/AttackersValue and
+    // would stop bots fighting in Wintergrasp at all.
+    if (AreaTableEntry const* zone = sAreaTableStore.LookupEntry(zoneId))
+        if (zone->flags & AREA_FLAG_WINTERGRASP)
+            return fail("Wintergrasp");
+
     return true;
 }
 

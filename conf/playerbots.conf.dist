@@ -2369,7 +2369,8 @@ AiPlayerbot.SummonAtInnkeepersEnabled = 1
 # Ganker system (M1 + M2 + M3)
 #
 # Spawns existing random bots as PvP gankers against your real character when
-# you are PvP-flagged in a contested zone (Stranglethorn, Tanaris, etc.).
+# you are PvP-flagged in a contested zone (Stranglethorn, Tanaris, and all of
+# Outland/Northrend - see UseClassicZoneList).
 # Bots are pulled from the random pool, no dedicated spawning. Disabled by
 # default - opt in by setting Enabled = 1.
 ###############################################################################
@@ -2418,9 +2419,14 @@ AiPlayerbot.Ganker.MaxConcurrentVictims = 4
 AiPlayerbot.Ganker.MaxConcurrentGankers = 8
 
 # If 1, only zones listed in ContestedZoneIds are valid gank targets.
-# If 0, any zone whose AreaTableEntry::team == AREATEAM_NONE is valid.
-AiPlayerbot.Ganker.UseClassicZoneList = 1
+# If 0, any zone whose AreaTableEntry::team == AREATEAM_NONE is valid - the same
+# rule the core uses for hostile territory, so it covers Outland and Northrend
+# too. Keep this at 0 unless you want ganking confined to classic 1-60 content:
+# the list below has no Outland/Northrend zones, so with 1 a level 60+ character
+# stops being a valid victim entirely. Wintergrasp is always excluded.
+AiPlayerbot.Ganker.UseClassicZoneList = 0
 
+# Only used when UseClassicZoneList = 1.
 # Default classic 1-60 contested zones (Stranglethorn, Tanaris, Arathi,
 # Hillsbrad, Ashenvale, etc.).
 AiPlayerbot.Ganker.ContestedZoneIds = "33,440,3,51,46,267,45,405,406,400,357,490,1377,618,139,28,47,16,361"

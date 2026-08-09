@@ -234,8 +234,10 @@ bool PlayerbotAIConfig::Initialize()
         sConfigMgr->GetOption<int32>("AiPlayerbot.Ganker.MaxConcurrentVictims", 4);
     gankerMaxConcurrentGankers =
         sConfigMgr->GetOption<int32>("AiPlayerbot.Ganker.MaxConcurrentGankers", 8);
+    // Default off: the classic list stops at 1-60 content, so a victim in Outland
+    // or Northrend was never eligible. AREATEAM_NONE covers those automatically.
     gankerUseClassicZoneList =
-        sConfigMgr->GetOption<bool>("AiPlayerbot.Ganker.UseClassicZoneList", true);
+        sConfigMgr->GetOption<bool>("AiPlayerbot.Ganker.UseClassicZoneList", false);
     LoadList<std::vector<uint32>>(
         sConfigMgr->GetOption<std::string>(
             "AiPlayerbot.Ganker.ContestedZoneIds",
