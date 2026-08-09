@@ -90,8 +90,8 @@ void GankerScheduler::Tick()
         }
 
         uint32 wantCount = (urand(1, 100) <= sPlayerbotAIConfig.gankerPairProbabilityPercent) ? 2 : 1;
-        uint32 poolSize = 0;
-        std::vector<Player*> candidates = SelectGankers(victim, wantCount, &poolSize);
+        GankerCandidateStats stats;
+        std::vector<Player*> candidates = SelectGankers(victim, wantCount, &stats);
         if (candidates.empty())
         {
             // Retry soon rather than locking the victim for MinSecondsBetweenAttempts:
@@ -99,14 +99,12 @@ void GankerScheduler::Tick()
             nextEligibleAt[vguid] = now + sPlayerbotAIConfig.gankerSchedulerIntervalSeconds;
             LOG_INFO("playerbots",
                      "Ganker: no candidates for victim {} <{}> (lvl {}, team {}); "
-                     "random-bot pool in level range had {} bot(s) opposite-faction. "
-                     "Tip: ensure random bots exist between lvl {} and {} on the "
-                     "opposite faction (online, alive, not in BG/dungeon, not in phased "
-                     "content, not in combat, not already in a group).",
+                     "wanted lvl {}-{} on the opposite faction. Rejected by filter: {}",
                      victim->GetGUID().ToString().c_str(), victim->GetName().c_str(),
-                     victim->GetLevel(), (uint32)victim->GetTeamId(), poolSize,
+                     victim->GetLevel(), (uint32)victim->GetTeamId(),
                      std::max<int32>(1, (int32)victim->GetLevel() + sPlayerbotAIConfig.gankerLevelOffsetMin),
-                     (int32)victim->GetLevel() + sPlayerbotAIConfig.gankerLevelOffsetMax);
+                     (int32)victim->GetLevel() + sPlayerbotAIConfig.gankerLevelOffsetMax,
+                     stats.ToString());
             continue;
         }
 
@@ -188,13 +186,41 @@ uint32 GankerScheduler::ClassWeight(uint8 cls) const
     }
 }
 
-std::vector<Player*> GankerScheduler::SelectGankers(Player* victim, uint32 count, uint32* outPoolSize) const
+std::string GankerCandidateStats::ToString() const
+{
+    std::ostringstream oss;
+    oss << "scanned=" << scanned << " eligible=" << eligible
+        << " | notRandomBot=" << notRandomBot
+        << " alreadyGanking=" << alreadyGanking
+        << " dead=" << dead
+        << " inBgOrDungeon=" << inBgOrDungeon
+        << " phased=" << phased
+        << " inCombat=" << inCombat
+        << " inGroup=" << inGroup
+        << " sameFaction=" << sameFaction
+        << " outOfLevelRange=" << outOfLevelRange
+        << " zeroClassWeight=" << zeroClassWeight;
+    return oss.str();
+}
+
+std::vector<Player*> GankerScheduler::SelectGankers(Player* victim, uint32 count,
+                                                    GankerCandidateStats* outStats) const
 {
     std::vector<Player*> result;
-    if (outPoolSize)
-        *outPoolSize = 0;
+    GankerCandidateStats stats;
+    // Publish on every return path, including the early bails, so the caller never
+    // logs a stale or default-constructed tally.
+    auto publish = [outStats, &stats]()
+    {
+        if (outStats)
+            *outStats = stats;
+    };
+
     if (!victim || !count)
+    {
+        publish();
         return result;
+    }
 
     int32 victimLvl = static_cast<int32>(victim->GetLevel());
     int32 minLvl = std::max<int32>(1, victimLvl + sPlayerbotAIConfig.gankerLevelOffsetMin);
@@ -215,38 +241,71 @@ std::vector<Player*> GankerScheduler::SelectGankers(Player* victim, uint32 count
         Player* bot = it->second;
         if (!bot || !bot->IsInWorld())
             continue;
+
+        ++stats.scanned;
+
         if (!sRandomPlayerbotMgr.IsRandomBot(bot))
+        {
+            ++stats.notRandomBot;
             continue;
+        }
         if (activeGankers.find(bot->GetGUID()) != activeGankers.end())
+        {
+            ++stats.alreadyGanking;
             continue;
+        }
         if (!bot->IsAlive())
+        {
+            ++stats.dead;
             continue;
+        }
         if (bot->InBattleground() || (bot->GetMap() && bot->GetMap()->IsDungeon()))
+        {
+            ++stats.inBgOrDungeon;
             continue;
+        }
         // Phased content (e.g. the Death Knight start in the Scarlet Enclave) is a
         // scripted sequence: teleporting the bot out strands it in a phase its
         // quest state no longer matches, and it cannot walk back in.
         if (bot->GetPhaseMask() != PHASEMASK_NORMAL)
+        {
+            ++stats.phased;
             continue;
+        }
         if (bot->IsInCombat())
+        {
+            ++stats.inCombat;
             continue;
+        }
         if (bot->GetGroup())
+        {
+            ++stats.inGroup;
             continue;
+        }
         if (bot->GetTeamId() == victimTeam)
+        {
+            ++stats.sameFaction;
             continue;
+        }
         int32 lvl = static_cast<int32>(bot->GetLevel());
         if (lvl < minLvl || lvl > maxLvl)
+        {
+            ++stats.outOfLevelRange;
             continue;
+        }
 
         uint32 w = ClassWeight(bot->getClass());
         if (!w)
+        {
+            ++stats.zeroClassWeight;
             continue;
+        }
 
         pool.push_back({bot, w});
     }
 
-    if (outPoolSize)
-        *outPoolSize = (uint32)pool.size();
+    stats.eligible = (uint32)pool.size();
+    publish();
 
     if (pool.empty())
         return result;

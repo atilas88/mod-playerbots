@@ -16,6 +16,28 @@
 
 class Player;
 
+// Per-filter rejection tally from SelectGankers. Without it the "no candidates"
+// log can only report an empty pool, never which filter emptied it: the old
+// pool-size counter was read after every filter had run, so on the one path that
+// logs it, it was always zero.
+struct GankerCandidateStats
+{
+    uint32 scanned = 0;
+    uint32 notRandomBot = 0;
+    uint32 alreadyGanking = 0;
+    uint32 dead = 0;
+    uint32 inBgOrDungeon = 0;
+    uint32 phased = 0;
+    uint32 inCombat = 0;
+    uint32 inGroup = 0;
+    uint32 sameFaction = 0;
+    uint32 outOfLevelRange = 0;
+    uint32 zeroClassWeight = 0;
+    uint32 eligible = 0;
+
+    std::string ToString() const;
+};
+
 class GankerScheduler
 {
 public:
@@ -36,7 +58,7 @@ public:
 
 private:
     bool IsEligibleVictim(Player* victim, std::string* reason = nullptr) const;
-    std::vector<Player*> SelectGankers(Player* victim, uint32 count, uint32* outPoolSize = nullptr) const;
+    std::vector<Player*> SelectGankers(Player* victim, uint32 count, GankerCandidateStats* outStats = nullptr) const;
     bool DispatchGank(Player* victim, std::vector<Player*> const& gankers);
     void PruneStaleGankers();
 
