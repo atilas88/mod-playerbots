@@ -2518,7 +2518,13 @@ void RandomPlayerbotMgr::OnPlayerLogout(Player* player)
     DisablePlayerBot(player->GetGUID());
 
     if (sPlayerbotAIConfig.gankerEnabled)
+    {
+        // The leaving player can be on either side of a gank. OnVictimGone only
+        // releases the bots hunting it; if the leaver *is* the ganker bot, its own
+        // entry has to go too or it holds a concurrency slot for good.
         gankerScheduler.OnVictimGone(player->GetGUID());
+        gankerScheduler.OnGankerReleased(player->GetGUID());
+    }
 
     for (PlayerBotMap::const_iterator it = GetPlayerBotsBegin(); it != GetPlayerBotsEnd(); ++it)
     {

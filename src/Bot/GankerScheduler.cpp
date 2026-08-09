@@ -30,6 +30,10 @@ void GankerScheduler::Tick()
         return;
     lastTickAt = now;
 
+    // Must run before the concurrency check below: a stale entry would otherwise
+    // hold a slot forever and starve the scheduler.
+    PruneStaleGankers();
+
     if (activeGankers.size() >= sPlayerbotAIConfig.gankerMaxConcurrentGankers)
     {
         LOG_DEBUG("playerbots",
@@ -97,8 +101,8 @@ void GankerScheduler::Tick()
                      "Ganker: no candidates for victim {} <{}> (lvl {}, team {}); "
                      "random-bot pool in level range had {} bot(s) opposite-faction. "
                      "Tip: ensure random bots exist between lvl {} and {} on the "
-                     "opposite faction (online, alive, not in BG/dungeon, not in combat, "
-                     "not already in a group).",
+                     "opposite faction (online, alive, not in BG/dungeon, not in phased "
+                     "content, not in combat, not already in a group).",
                      victim->GetGUID().ToString().c_str(), victim->GetName().c_str(),
                      victim->GetLevel(), (uint32)victim->GetTeamId(), poolSize,
                      std::max<int32>(1, (int32)victim->GetLevel() + sPlayerbotAIConfig.gankerLevelOffsetMin),
@@ -208,6 +212,11 @@ std::vector<Player*> GankerScheduler::SelectGankers(Player* victim, uint32 count
         if (!bot->IsAlive())
             continue;
         if (bot->InBattleground() || (bot->GetMap() && bot->GetMap()->IsDungeon()))
+            continue;
+        // Phased content (e.g. the Death Knight start in the Scarlet Enclave) is a
+        // scripted sequence: teleporting the bot out strands it in a phase its
+        // quest state no longer matches, and it cannot walk back in.
+        if (bot->GetPhaseMask() != PHASEMASK_NORMAL)
             continue;
         if (bot->IsInCombat())
             continue;
@@ -409,6 +418,31 @@ bool GankerScheduler::DispatchGank(Player* victim, std::vector<Player*> const& g
     }
 
     return dispatchedAny;
+}
+
+// Only ReleaseGankerAction ever calls OnGankerReleased, so a bot that leaves the
+// world some other way (logout, or DisablePlayerBot detaching its AI) never gets
+// released. Reap those here so their slots come back.
+void GankerScheduler::PruneStaleGankers()
+{
+    std::vector<ObjectGuid> stale;
+    for (ObjectGuid bguid : activeGankers)
+    {
+        // FindConnectedPlayer still resolves a bot that is mid-teleport, so this
+        // cannot fire on a ganker simply being moved to its victim.
+        Player* bot = ObjectAccessor::FindConnectedPlayer(bguid);
+        if (!bot || !GET_PLAYERBOT_AI(bot))
+            stale.push_back(bguid);
+    }
+
+    for (ObjectGuid bguid : stale)
+    {
+        LOG_INFO("playerbots",
+                 "Ganker: reaping stale ganker {} (bot gone or AI detached)",
+                 bguid.ToString().c_str());
+        activeGankers.erase(bguid);
+        ganker2victim.erase(bguid);
+    }
 }
 
 void GankerScheduler::OnGankerReleased(ObjectGuid bot, bool retreat)

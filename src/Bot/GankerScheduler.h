@@ -38,6 +38,7 @@ private:
     bool IsEligibleVictim(Player* victim, std::string* reason = nullptr) const;
     std::vector<Player*> SelectGankers(Player* victim, uint32 count, uint32* outPoolSize = nullptr) const;
     bool DispatchGank(Player* victim, std::vector<Player*> const& gankers);
+    void PruneStaleGankers();
 
     uint32 ClassWeight(uint8 cls) const;
 
