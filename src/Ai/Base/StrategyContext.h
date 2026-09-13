@@ -12,6 +12,7 @@
 #include "BattlegroundStrategy.h"
 #include "CastTimeStrategy.h"
 #include "ChatCommandHandlerStrategy.h"
+#include "CombatStrategy.h"
 #include "ConserveManaStrategy.h"
 #include "CustomStrategy.h"
 #include "DeadStrategy.h"
@@ -22,6 +23,7 @@
 #include "FleeStrategy.h"
 #include "FocusTargetStrategy.h"
 #include "FollowMasterStrategy.h"
+#include "ForceRebuff.h"
 #include "GankerStrategy.h"
 #include "GrindingStrategy.h"
 #include "GroupStrategy.h"
@@ -72,6 +74,7 @@ public:
         creators["chat"] = &StrategyContext::chat;
         creators["default"] = &StrategyContext::world_packet;
         creators["ready check"] = &StrategyContext::ready_check;
+        creators["force rebuff"] = &StrategyContext::force_rebuff;
         creators["dead"] = &StrategyContext::dead;
         creators["flee"] = &StrategyContext::flee;
         creators["duel"] = &StrategyContext::duel;
@@ -162,6 +165,7 @@ private:
     static Strategy* chat(PlayerbotAI* botAI) { return new ChatCommandHandlerStrategy(botAI); }
     static Strategy* world_packet(PlayerbotAI* botAI) { return new WorldPacketHandlerStrategy(botAI); }
     static Strategy* ready_check(PlayerbotAI* botAI) { return new ReadyCheckStrategy(botAI); }
+    static Strategy* force_rebuff(PlayerbotAI* botAI) { return new ForceRebuffStrategy(botAI); }
     static Strategy* pvp(PlayerbotAI* botAI) { return new AttackEnemyPlayersStrategy(botAI); }
     static Strategy* ganker(PlayerbotAI* botAI) { return new GankerStrategy(botAI); }
     static Strategy* ganker_dead(PlayerbotAI* botAI) { return new GankerDeadStrategy(botAI); }

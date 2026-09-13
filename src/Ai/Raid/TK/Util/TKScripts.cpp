@@ -4,11 +4,11 @@
  * or (at your option) any later version.
  */
 
-#include "TKHelpers.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
 #include "ScriptMgr.h"
 #include "Spell.h"
+#include "TKHelpers.h"
 #include "Timer.h"
 
 using namespace TempestKeepHelpers;
@@ -41,7 +41,7 @@ public:
         orbs.push_back(orbData);
 
         orbs.erase(std::remove_if(orbs.begin(), orbs.end(),
-            [currentTime](const ArcaneOrbData& orb) {
+            [currentTime](ArcaneOrbData const& orb) {
                 return getMSTimeDiff(orb.castTime, currentTime) > 5000;
             }), orbs.end());
     }

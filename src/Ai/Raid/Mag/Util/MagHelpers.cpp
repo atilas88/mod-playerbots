@@ -57,7 +57,7 @@ const std::vector<uint32> MANTICRON_CUBE_DB_GUIDS = { 43157, 43158, 43159, 43160
 
 // Get the positions of all Manticron Cubes by their database GUIDs
 std::vector<CubeInfo> GetAllCubeInfosByDbGuids(
-    Map* map, const std::vector<uint32>& cubeDbGuids)
+    Map* map, std::vector<uint32> const& cubeDbGuids)
 {
     std::vector<CubeInfo> cubes;
     if (!map)
@@ -114,7 +114,7 @@ bool IsPositionInActiveDebris(uint32 instanceId, float x, float y, float radius)
     return false;
 }
 
-bool IsPositionInActiveConflagration(PlayerbotAI* botAI, Player* bot, float x, float y)
+bool IsPositionInActiveConflagration(PlayerbotAI* botAI, float x, float y)
 {
     constexpr float conflagrationHazardRadius = 5.0f;
     GuidVector const& gameObjects =

@@ -9,8 +9,8 @@
 
 #include "EventMap.h"
 #include "GenericTriggers.h"
-#include "PlayerbotAIConfig.h"
 #include "NaxxBossHelper.h"
+#include "PlayerbotAIConfig.h"
 #include "Trigger.h"
 
 class MutatingInjectionTrigger : public HasAuraTrigger
@@ -64,19 +64,25 @@ private:
     static constexpr uint32 CloudRotationDelayMs = 15000;
 };
 
-//class HeiganMeleeTrigger : public Trigger
-//{
-//public:
-//    HeiganMeleeTrigger(PlayerbotAI* ai) : Trigger(ai, "heigan melee") {}
-//    virtual bool IsActive();
-//};
-//
-//class HeiganRangedTrigger : public Trigger
-//{
-//public:
-//    HeiganRangedTrigger(PlayerbotAI* ai) : Trigger(ai, "heigan ranged") {}
-//    bool IsActive() override;
-//};
+class HeiganMeleeTrigger : public Trigger
+{
+public:
+    explicit HeiganMeleeTrigger(PlayerbotAI* ai) : Trigger(ai, "heigan melee"), helper(ai) {}
+    bool IsActive() override;
+
+private:
+    HeiganBossHelper helper;
+};
+
+class HeiganRangedTrigger : public Trigger
+{
+public:
+    explicit HeiganRangedTrigger(PlayerbotAI* ai) : Trigger(ai, "heigan ranged"), helper(ai) {}
+    bool IsActive() override;
+
+private:
+    HeiganBossHelper helper;
+};
 
 class RazuviousTankTrigger : public Trigger
 {

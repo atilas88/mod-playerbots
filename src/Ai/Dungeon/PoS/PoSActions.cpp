@@ -4,8 +4,8 @@
  * or (at your option) any later version.
  */
 
-#include "Playerbots.h"
 #include "PoSActions.h"
+#include "Playerbots.h"
 
 bool IckAndKrickAction::Execute(Event /*event*/)
 {
@@ -226,7 +226,7 @@ bool IckAndKrickAction::ExplosiveBarrage(bool /*explosiveBarrage*/, Unit* boss)
             score += minOrbDist * 2.0f;  // Weight orb distance more heavily
 
             // Check distance from other players
-            for (const Position& playerPos : playerPositions)
+            for (Position const& playerPos : playerPositions)
             {
                 float playerDist = sqrt(pow(potentialPos.GetPositionX() - playerPos.GetPositionX(), 2) +
                                         pow(potentialPos.GetPositionY() - playerPos.GetPositionY(), 2));

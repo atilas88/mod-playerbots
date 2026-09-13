@@ -1,22 +1,16 @@
 /*
- * Copyright (C) 2016+ AzerothCore <www.azerothcore.org>, released under GNU AGPL v3 license, you may redistribute it
- * and/or modify it under version 3 of the License, or (at your option), any later version.
+ * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
+ * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
+ * or (at your option) any later version.
  */
 
 #include "PlayerbotMgr.h"
-
-#include <cstdio>
-#include <cstring>
-#include <string>
-#include <unordered_set>
-#include <openssl/sha.h>
-#include <iomanip>
-#include <algorithm>
-
+#include "BroadcastHelper.h"
 #include "ChannelMgr.h"
 #include "CharacterCache.h"
 #include "CharacterPackets.h"
 #include "Common.h"
+#include "DatabaseEnv.h"
 #include "Define.h"
 #include "Group.h"
 #include "GuildMgr.h"
@@ -24,20 +18,25 @@
 #include "ObjectGuid.h"
 #include "ObjectMgr.h"
 #include "PlayerbotAIConfig.h"
-#include "PlayerbotRepository.h"
 #include "PlayerbotFactory.h"
+#include "PlayerbotGuildMgr.h"
 #include "PlayerbotOperations.h"
+#include "PlayerbotRepository.h"
 #include "PlayerbotSecurity.h"
 #include "PlayerbotTextMgr.h"
 #include "PlayerbotWorldThreadProcessor.h"
 #include "Playerbots.h"
-#include "PlayerbotGuildMgr.h"
 #include "RandomPlayerbotMgr.h"
 #include "SharedDefines.h"
 #include "WorldSession.h"
-#include "BroadcastHelper.h"
 #include "WorldSessionMgr.h"
-#include "DatabaseEnv.h"
+#include <algorithm>
+#include <cstdio>
+#include <cstring>
+#include <iomanip>
+#include <openssl/sha.h>
+#include <string>
+#include <unordered_set>
 
 class BotInitGuard
 {
@@ -285,7 +284,7 @@ void PlayerbotHolder::LogoutAllBots()
             break;
 
         Player* bot= itr->second;
-        if (!GET_PLAYERBOT_AI(bot)->IsRealPlayer())
+        if (!IsSelfBot(bot))
             LogoutPlayerBot(bot->GetGUID());
     }
     */
@@ -298,7 +297,7 @@ void PlayerbotHolder::LogoutAllBots()
             continue;
 
         PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
-        if (!botAI || botAI->IsRealPlayer())
+        if (!botAI || IsSelfBot(bot))
             continue;
 
         LogoutPlayerBot(bot->GetGUID());
@@ -315,7 +314,7 @@ void PlayerbotMgr::CancelLogout()
     {
         Player* const bot = it->second;
         PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
-        if (!botAI || botAI->IsRealPlayer())
+        if (!botAI || IsSelfBot(bot))
             continue;
 
         if (bot->GetSession()->isLogingOut())
@@ -332,7 +331,7 @@ void PlayerbotMgr::CancelLogout()
     {
         Player* const bot = it->second;
         PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
-        if (!botAI || botAI->IsRealPlayer())
+        if (!botAI || IsSelfBot(bot))
             continue;
 
         if (botAI->GetMaster() != master)
@@ -425,7 +424,7 @@ void PlayerbotHolder::DisablePlayerBot(ObjectGuid guid)
         bot->GetMotionMaster()->Clear();
 
         Group* group = bot->GetGroup();
-        if (group && !bot->InBattleground() && !bot->InBattlegroundQueue() && botAI->HasActivePlayerMaster())
+        if (group && !bot->InBattleground() && !bot->InBattlegroundQueue() && IsRealPlayer(botAI->GetMaster()))
         {
             PlayerbotRepository::instance().Save(botAI);
         }
@@ -433,13 +432,6 @@ void PlayerbotHolder::DisablePlayerBot(ObjectGuid guid)
         LOG_DEBUG("playerbots", "Bot {} logged out", bot->GetName().c_str());
 
         bot->SaveToDB(false, false);
-
-        if (botAI->GetAiObjectContext())  // Maybe some day re-write to delate all pointer values.
-        {
-            TravelTarget* target = botAI->GetAiObjectContext()->GetValue<TravelTarget*>("travel target")->Get();
-            if (target)
-                delete target;
-        }
 
         RemoveFromPlayerbotsMap(guid);  // deletes bot player ptr inside this WorldSession PlayerBotMap
 
@@ -1167,8 +1159,8 @@ std::vector<std::string> PlayerbotHolder::HandlePlayerbotCommand(char const* arg
             return messages;
         }
         uint8 teamId = master->GetTeamId(true);
-        const std::unordered_set<ObjectGuid> &guidCache = sRandomPlayerbotMgr.addclassCache[RandomPlayerbotMgr::GetTeamClassIdx(teamId == TEAM_ALLIANCE, claz)];
-        for (const ObjectGuid &guid: guidCache)
+        std::unordered_set<ObjectGuid> const& guidCache = sRandomPlayerbotMgr.addclassCache[RandomPlayerbotMgr::GetTeamClassIdx(teamId == TEAM_ALLIANCE, claz)];
+        for (ObjectGuid const& guid: guidCache)
         {
             // If the user requested a specific gender, skip any character that doesn't match.
             if (gender != -1 && GetOfflinePlayerGender(guid) != gender)
@@ -1824,7 +1816,7 @@ PlayerbotMgr* PlayerbotsMgr::GetPlayerbotMgr(Player* player)
     return nullptr;
 }
 
-void PlayerbotMgr::HandleSetSecurityKeyCommand(Player* player, const std::string& key)
+void PlayerbotMgr::HandleSetSecurityKeyCommand(Player* player, std::string const& key)
 {
     uint32 accountId = player->GetSession()->GetAccountId();
 
@@ -1845,7 +1837,7 @@ void PlayerbotMgr::HandleSetSecurityKeyCommand(Player* player, const std::string
     ChatHandler(player->GetSession()).PSendSysMessage("Security key set successfully.");
 }
 
-void PlayerbotMgr::HandleLinkAccountCommand(Player* player, const std::string& accountName, const std::string& key)
+void PlayerbotMgr::HandleLinkAccountCommand(Player* player, std::string const& accountName, std::string const& key)
 {
     QueryResult result = LoginDatabase.Query("SELECT id FROM account WHERE username = '{}'", accountName);
     if (!result)
@@ -1923,7 +1915,7 @@ void PlayerbotMgr::HandleViewLinkedAccountsCommand(Player* player)
     } while (result->NextRow());
 }
 
-void PlayerbotMgr::HandleUnlinkAccountCommand(Player* player, const std::string& accountName)
+void PlayerbotMgr::HandleUnlinkAccountCommand(Player* player, std::string const& accountName)
 {
     QueryResult result = LoginDatabase.Query("SELECT id FROM account WHERE username = '{}'", accountName);
     if (!result)

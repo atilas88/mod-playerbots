@@ -4,12 +4,11 @@
  * or (at your option) any later version.
  */
 
-#include "ScriptMgr.h"
+#include "ObjectAccessor.h"
 #include "Opcodes.h"
 #include "Player.h"
-#include "ObjectAccessor.h"
-
 #include "Playerbots.h"
+#include "ScriptMgr.h"
 
 namespace
 {
@@ -23,7 +22,7 @@ namespace
             return nullptr;
 
         PlayerbotAI* ai = GET_PLAYERBOT_AI(p);
-        if (!ai || ai->IsRealPlayer())
+        if (!ai || IsSelfBot(p))
             return nullptr;
 
         return p;
@@ -57,6 +56,8 @@ class PlayerbotsSecureLoginServerScript : public ServerScript
 public:
     PlayerbotsSecureLoginServerScript()
         : ServerScript("PlayerbotsSecureLoginServerScript", { SERVERHOOK_CAN_PACKET_RECEIVE }) {}
+
+    using ServerScript::CanPacketReceive;  // keep the non-const WorldPacket& overload visible
 
     bool CanPacketReceive(WorldSession* /*session*/, WorldPacket const& packet) override
     {

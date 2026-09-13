@@ -4,13 +4,12 @@
  * or (at your option) any later version.
  */
 
-#include "Playerbots.h"
 #include "TOCActions.h"
+#include "GenericSpellActions.h"
 #include "NearestNpcsValue.h"
 #include "ObjectAccessor.h"
+#include "Playerbots.h"
 #include "Vehicle.h"
-#include "GenericSpellActions.h"
-#include "GenericActions.h"
 
 bool ToCLanceAction::Execute(Event /*event*/)
 {

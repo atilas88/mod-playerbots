@@ -16,11 +16,11 @@
 #define PLAYERBOTS_PERFMONITOR_H
 
 #include <chrono>
+#include <cstdint>
 #include <ctime>
 #include <map>
 #include <mutex>
 #include <vector>
-#include <cstdint>
 
 typedef std::vector<std::string> PerformanceStack;
 
@@ -74,8 +74,8 @@ private:
     PerfMonitor() = default;
     virtual ~PerfMonitor() = default;
 
-    PerfMonitor(const PerfMonitor&) = delete;
-    PerfMonitor& operator=(const PerfMonitor&) = delete;
+    PerfMonitor(PerfMonitor const&) = delete;
+    PerfMonitor& operator=(PerfMonitor const&) = delete;
 
     PerfMonitor(PerfMonitor&&) = delete;
     PerfMonitor& operator=(PerfMonitor&&) = delete;

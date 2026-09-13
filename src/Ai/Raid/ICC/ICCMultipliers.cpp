@@ -5,29 +5,28 @@
  */
 
 #include "ICCMultipliers.h"
-
 #include "AttackAction.h"
 #include "ChooseTargetActions.h"
 #include "DKActions.h"
 #include "DruidActions.h"
 #include "DruidBearActions.h"
 #include "FollowActions.h"
-#include "GenericActions.h"
 #include "GenericSpellActions.h"
 #include "HunterActions.h"
+#include "ICCActions.h"
+#include "ICCScripts.h"
+#include "ICCTriggers.h"
 #include "MageActions.h"
 #include "MovementActions.h"
 #include "PaladinActions.h"
+#include "PetsAction.h"
+#include "PlayerbotAI.h"
 #include "PriestActions.h"
-#include "ICCActions.h"
 #include "ReachTargetActions.h"
 #include "RogueActions.h"
 #include "ShamanActions.h"
 #include "UseMeetingStoneAction.h"
 #include "WarriorActions.h"
-#include "PlayerbotAI.h"
-#include "ICCTriggers.h"
-#include "ICCScripts.h"
 
 // Lady Deathwhisper
 float IccLadyDeathwhisperMultiplier::GetValue(Action* action)

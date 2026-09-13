@@ -7,11 +7,10 @@
 #ifndef PLAYERBOTS_ZAHELPERS_H
 #define PLAYERBOTS_ZAHELPERS_H
 
-#include <unordered_map>
-
 #include "AiObject.h"
 #include "Position.h"
 #include "Unit.h"
+#include <unordered_map>
 
 namespace ZulAmanHelpers
 {
@@ -77,13 +76,13 @@ namespace ZulAmanHelpers
     // General
     constexpr uint32 ZULAMAN_MAP_ID = 568;
     Position FindSafestNearbyPosition(
-        Player* bot, const std::vector<Unit*>& hazards, const Position& center,
+        Player* bot, std::vector<Unit*> const& hazards, Position const& center,
         float safeZoneRadius, float hazardRadius, bool requireSafePath);
     bool IsPathSafeFromHazards(
-        const Position& start, const Position& end,
-        const std::vector<Unit*>& hazards, float hazardRadius);
+        Position const& start, Position const& end,
+        std::vector<Unit*> const& hazards, float hazardRadius);
     bool IsPositionSafeFromHazards(
-        float x, float y, const std::vector<Unit*>& hazards, float hazardRadius);
+        float x, float y, std::vector<Unit*> const& hazards, float hazardRadius);
     std::vector<Unit*> GetAllHazardTriggers(
         Player* bot, uint32 entry, float searchRadius);
 

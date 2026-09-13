@@ -5,16 +5,16 @@
  */
 
 #include "ICCTriggers.h"
-#include "ICCActions.h"
-#include "NearestNpcsValue.h"
-#include "PlayerbotAIConfig.h"
-#include "ObjectAccessor.h"
 #include "GenericTriggers.h"
+#include "GridNotifiers.h"
+#include "ICCActions.h"
+#include "ICCScripts.h"
+#include "NearestNpcsValue.h"
+#include "ObjectAccessor.h"
+#include "PlayerbotAIConfig.h"
 #include "Playerbots.h"
 #include "Trigger.h"
-#include "GridNotifiers.h"
 #include "Vehicle.h"
-#include "ICCScripts.h"
 
 //Lord Marrogwar
 bool IccLmTrigger::IsActive()
@@ -331,7 +331,7 @@ bool IccPutricideGrowingOozePuddleTrigger::IsActive()
     if (!boss)
         return false;
 
-    const GuidVector& npcs = AI_VALUE(GuidVector, "nearest hostile npcs");
+    GuidVector const& npcs = AI_VALUE(GuidVector, "nearest hostile npcs");
     for (auto const& npc : npcs)
     {
         if (Unit* unit = botAI->GetUnit(npc))

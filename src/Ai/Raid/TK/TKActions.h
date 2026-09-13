@@ -7,11 +7,11 @@
 #ifndef PLAYERBOTS_TKACTIONS_H
 #define PLAYERBOTS_TKACTIONS_H
 
-#include "TKHelpers.h"
-#include "TKKaelthasBossAI.h"
 #include "Action.h"
 #include "AttackAction.h"
 #include "MovementActions.h"
+#include "TKHelpers.h"
+#include "TKKaelthasBossAI.h"
 
 using namespace TempestKeepHelpers;
 
@@ -217,7 +217,7 @@ public:
 private:
     std::pair<Unit*, Unit*> GetSolariumPriests(PlayerbotAI* botAI);
     std::vector<Player*> GetMeleeBots(Group* group);
-    Unit* AssignSolariumPriestsToBots(const std::pair<Unit*, Unit*>& priestsPair, const std::vector<Player*>& meleeMembers);
+    Unit* AssignSolariumPriestsToBots(std::pair<Unit*, Unit*> const& priestsPair, std::vector<Player*> const& meleeMembers);
 };
 
 class HighAstromancerSolarianCastFearWardOnMainTankAction : public Action

@@ -5,15 +5,14 @@
  */
 
 #include "WarriorAiObjectContext.h"
-
 #include "ArmsWarriorStrategy.h"
 #include "FuryWarriorStrategy.h"
 #include "GenericWarriorNonCombatStrategy.h"
 #include "NamedObjectContext.h"
 #include "Playerbots.h"
 #include "TankWarriorStrategy.h"
-#include "WarriorPullStrategy.h"
 #include "WarriorActions.h"
+#include "WarriorPullStrategy.h"
 #include "WarriorTriggers.h"
 
 class WarriorStrategyFactoryInternal : public NamedObjectContext<Strategy>
@@ -28,7 +27,7 @@ public:
 
 private:
     static Strategy* nc(PlayerbotAI* botAI) { return new GenericWarriorNonCombatStrategy(botAI); }
-    static Strategy* warrior_aoe(PlayerbotAI* botAI) { return new WarrirorAoeStrategy(botAI); }
+    static Strategy* warrior_aoe(PlayerbotAI* botAI) { return new WarriorAoeStrategy(botAI); }
     static Strategy* pull(PlayerbotAI* botAI) { return new WarriorPullStrategy(botAI); }
 };
 

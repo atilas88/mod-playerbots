@@ -5,9 +5,8 @@
  */
 
 #include "BWLTriggers.h"
-
-#include "Playerbots.h"
 #include "BWLHelpers.h"
+#include "Playerbots.h"
 
 using namespace BlackwingLairHelpers;
 
@@ -22,7 +21,7 @@ bool BwlSuppressionDeviceTrigger::IsActive()
         GuidVector gos = AI_VALUE(GuidVector, "nearest game objects");
         for (auto i = gos.begin(); i != gos.end(); ++i)
         {
-            const GameObject* go = botAI->GetGameObject(*i);
+            GameObject const* go = botAI->GetGameObject(*i);
             if (IsActiveSuppressionDeviceInRange(go, bot))
                 return true;
         }

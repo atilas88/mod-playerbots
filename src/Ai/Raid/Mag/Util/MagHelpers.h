@@ -7,13 +7,12 @@
 #ifndef PLAYERBOTS_MAGHELPERS_H
 #define PLAYERBOTS_MAGHELPERS_H
 
-#include <ctime>
-#include <unordered_map>
-#include <vector>
-
 #include "Group.h"
 #include "ObjectGuid.h"
 #include "PlayerbotAI.h"
+#include <ctime>
+#include <unordered_map>
+#include <vector>
 
 namespace MagtheridonHelpers
 {
@@ -78,13 +77,12 @@ extern std::unordered_map<uint32, std::vector<DebrisData>> activeDebrisPositions
 
 extern const std::vector<uint32> MANTICRON_CUBE_DB_GUIDS;
 std::vector<CubeInfo> GetAllCubeInfosByDbGuids(
-    Map* map, const std::vector<uint32>& cubeDbGuids);
+    Map* map, std::vector<uint32> const& cubeDbGuids);
 Creature* GetChanneler(Player* bot, uint32 dbGuid);
 bool IsMagtheridonActive(Unit* magtheridon);
 bool IsCubeClicker(Player* bot);
 bool IsPositionInActiveDebris(uint32 instanceId, float x, float y, float radius = 10.0f);
-bool IsPositionInActiveConflagration(
-    PlayerbotAI* botAI, Player* bot, float x, float y);
+bool IsPositionInActiveConflagration(PlayerbotAI* botAI, float x, float y);
 
 }
 

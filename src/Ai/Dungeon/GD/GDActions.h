@@ -9,9 +9,9 @@
 
 #include "Action.h"
 #include "AttackAction.h"
+#include "GDTriggers.h"
 #include "PlayerbotAI.h"
 #include "Playerbots.h"
-#include "GDTriggers.h"
 
 class AvoidPoisonNovaAction : public MovementAction
 {
@@ -24,6 +24,20 @@ class AttackSnakeWrapAction : public AttackAction
 {
 public:
     AttackSnakeWrapAction(PlayerbotAI* ai) : AttackAction(ai, "attack snake wrap") {}
+    bool Execute(Event event) override;
+};
+
+class SladranStackOnTankAction : public MovementAction
+{
+public:
+    SladranStackOnTankAction(PlayerbotAI* ai) : MovementAction(ai, "slad'ran stack on tank") {}
+    bool Execute(Event event) override;
+};
+
+class SladranTankHoldAction : public AttackAction
+{
+public:
+    SladranTankHoldAction(PlayerbotAI* ai) : AttackAction(ai, "slad'ran tank hold") {}
     bool Execute(Event event) override;
 };
 
