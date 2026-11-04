@@ -22,11 +22,11 @@
 
 void GankerScheduler::Tick()
 {
-    if (!sPlayerbotAIConfig.Enabled || !sPlayerbotAIConfig.gankerEnabled)
+    if (!sPlayerbotAIConfig.Enabled || !sPlayerbotAIConfig.GankerEnabled)
         return;
 
     time_t now = time(nullptr);
-    if (lastTickAt && (uint32)(now - lastTickAt) < sPlayerbotAIConfig.gankerSchedulerIntervalSeconds)
+    if (lastTickAt && (uint32)(now - lastTickAt) < sPlayerbotAIConfig.GankerSchedulerIntervalSeconds)
         return;
     lastTickAt = now;
 
@@ -34,11 +34,11 @@ void GankerScheduler::Tick()
     // hold a slot forever and starve the scheduler.
     PruneStaleGankers();
 
-    if (activeGankers.size() >= sPlayerbotAIConfig.gankerMaxConcurrentGankers)
+    if (activeGankers.size() >= sPlayerbotAIConfig.GankerMaxConcurrentGankers)
     {
         LOG_DEBUG("playerbots",
                   "Ganker tick: skipped (activeGankers={}/{})",
-                  (uint32)activeGankers.size(), sPlayerbotAIConfig.gankerMaxConcurrentGankers);
+                  (uint32)activeGankers.size(), sPlayerbotAIConfig.GankerMaxConcurrentGankers);
         return;
     }
 
@@ -57,9 +57,9 @@ void GankerScheduler::Tick()
             continue;
         if (sRandomPlayerbotMgr.IsRandomBot(victim))
             continue;
-        if (dispatchedVictims >= sPlayerbotAIConfig.gankerMaxConcurrentVictims)
+        if (dispatchedVictims >= sPlayerbotAIConfig.GankerMaxConcurrentVictims)
             break;
-        if (activeGankers.size() >= sPlayerbotAIConfig.gankerMaxConcurrentGankers)
+        if (activeGankers.size() >= sPlayerbotAIConfig.GankerMaxConcurrentGankers)
             break;
 
         std::string reason;
@@ -77,50 +77,50 @@ void GankerScheduler::Tick()
         if (cdIt != nextEligibleAt.end() && cdIt->second > now)
             continue;
 
-        if (urand(1, 100) > sPlayerbotAIConfig.gankerSpawnChancePercent)
+        if (urand(1, 100) > sPlayerbotAIConfig.GankerSpawnChancePercent)
         {
             // Apply a short cooldown so we don't reroll every tick.
-            nextEligibleAt[vguid] = now + sPlayerbotAIConfig.gankerSchedulerIntervalSeconds;
+            nextEligibleAt[vguid] = now + sPlayerbotAIConfig.GankerSchedulerIntervalSeconds;
             LOG_DEBUG("playerbots",
                       "Ganker: victim {} <{}> roll skipped this tick ({}% spawn chance, retry in {}s)",
                       victim->GetGUID().ToString().c_str(), victim->GetName().c_str(),
-                      sPlayerbotAIConfig.gankerSpawnChancePercent,
-                      sPlayerbotAIConfig.gankerSchedulerIntervalSeconds);
+                      sPlayerbotAIConfig.GankerSpawnChancePercent,
+                      sPlayerbotAIConfig.GankerSchedulerIntervalSeconds);
             continue;
         }
 
-        uint32 wantCount = (urand(1, 100) <= sPlayerbotAIConfig.gankerPairProbabilityPercent) ? 2 : 1;
+        uint32 wantCount = (urand(1, 100) <= sPlayerbotAIConfig.GankerPairProbabilityPercent) ? 2 : 1;
         GankerCandidateStats stats;
         std::vector<Player*> candidates = SelectGankers(victim, wantCount, &stats);
         if (candidates.empty())
         {
             // Retry soon rather than locking the victim for MinSecondsBetweenAttempts:
             // a candidate may come online or level up at any moment.
-            nextEligibleAt[vguid] = now + sPlayerbotAIConfig.gankerSchedulerIntervalSeconds;
+            nextEligibleAt[vguid] = now + sPlayerbotAIConfig.GankerSchedulerIntervalSeconds;
             LOG_INFO("playerbots",
                      "Ganker: no candidates for victim {} <{}> (lvl {}, team {}); "
                      "wanted lvl {}-{} on the opposite faction. Rejected by filter: {}",
                      victim->GetGUID().ToString().c_str(), victim->GetName().c_str(),
                      victim->GetLevel(), (uint32)victim->GetTeamId(),
-                     std::max<int32>(1, (int32)victim->GetLevel() + sPlayerbotAIConfig.gankerLevelOffsetMin),
-                     (int32)victim->GetLevel() + sPlayerbotAIConfig.gankerLevelOffsetMax,
+                     std::max<int32>(1, (int32)victim->GetLevel() + sPlayerbotAIConfig.GankerLevelOffsetMin),
+                     (int32)victim->GetLevel() + sPlayerbotAIConfig.GankerLevelOffsetMax,
                      stats.ToString());
             continue;
         }
 
         if (!DispatchGank(victim, candidates))
         {
-            nextEligibleAt[vguid] = now + sPlayerbotAIConfig.gankerSchedulerIntervalSeconds;
+            nextEligibleAt[vguid] = now + sPlayerbotAIConfig.GankerSchedulerIntervalSeconds;
             LOG_INFO("playerbots",
                      "Ganker: DispatchGank failed for victim {} <{}> "
                      "(terrain validation likely failed); retry in {}s",
                      victim->GetGUID().ToString().c_str(), victim->GetName().c_str(),
-                     sPlayerbotAIConfig.gankerSchedulerIntervalSeconds);
+                     sPlayerbotAIConfig.GankerSchedulerIntervalSeconds);
             continue;
         }
 
-        nextEligibleAt[vguid] = now + urand(sPlayerbotAIConfig.gankerMinSecondsBetweenAttempts,
-                                            sPlayerbotAIConfig.gankerMaxSecondsBetweenAttempts);
+        nextEligibleAt[vguid] = now + urand(sPlayerbotAIConfig.GankerMinSecondsBetweenAttempts,
+                                            sPlayerbotAIConfig.GankerMaxSecondsBetweenAttempts);
         ++dispatchedVictims;
     }
 }
@@ -172,16 +172,16 @@ uint32 GankerScheduler::ClassWeight(uint8 cls) const
 {
     switch (cls)
     {
-        case CLASS_WARRIOR:      return sPlayerbotAIConfig.gankerWeightWarrior;
-        case CLASS_PALADIN:      return sPlayerbotAIConfig.gankerWeightPaladin;
-        case CLASS_HUNTER:       return sPlayerbotAIConfig.gankerWeightHunter;
-        case CLASS_ROGUE:        return sPlayerbotAIConfig.gankerWeightRogue;
-        case CLASS_PRIEST:       return sPlayerbotAIConfig.gankerWeightPriest;
-        case CLASS_DEATH_KNIGHT: return sPlayerbotAIConfig.gankerWeightDeathKnight;
-        case CLASS_SHAMAN:       return sPlayerbotAIConfig.gankerWeightShaman;
-        case CLASS_MAGE:         return sPlayerbotAIConfig.gankerWeightMage;
-        case CLASS_WARLOCK:      return sPlayerbotAIConfig.gankerWeightWarlock;
-        case CLASS_DRUID:        return sPlayerbotAIConfig.gankerWeightDruid;
+        case CLASS_WARRIOR:      return sPlayerbotAIConfig.GankerWeightWarrior;
+        case CLASS_PALADIN:      return sPlayerbotAIConfig.GankerWeightPaladin;
+        case CLASS_HUNTER:       return sPlayerbotAIConfig.GankerWeightHunter;
+        case CLASS_ROGUE:        return sPlayerbotAIConfig.GankerWeightRogue;
+        case CLASS_PRIEST:       return sPlayerbotAIConfig.GankerWeightPriest;
+        case CLASS_DEATH_KNIGHT: return sPlayerbotAIConfig.GankerWeightDeathKnight;
+        case CLASS_SHAMAN:       return sPlayerbotAIConfig.GankerWeightShaman;
+        case CLASS_MAGE:         return sPlayerbotAIConfig.GankerWeightMage;
+        case CLASS_WARLOCK:      return sPlayerbotAIConfig.GankerWeightWarlock;
+        case CLASS_DRUID:        return sPlayerbotAIConfig.GankerWeightDruid;
         default:                 return 0;
     }
 }
@@ -223,8 +223,8 @@ std::vector<Player*> GankerScheduler::SelectGankers(Player* victim, uint32 count
     }
 
     int32 victimLvl = static_cast<int32>(victim->GetLevel());
-    int32 minLvl = std::max<int32>(1, victimLvl + sPlayerbotAIConfig.gankerLevelOffsetMin);
-    int32 maxLvl = victimLvl + sPlayerbotAIConfig.gankerLevelOffsetMax;
+    int32 minLvl = std::max<int32>(1, victimLvl + sPlayerbotAIConfig.GankerLevelOffsetMin);
+    int32 maxLvl = victimLvl + sPlayerbotAIConfig.GankerLevelOffsetMax;
     TeamId victimTeam = victim->GetTeamId();
 
     struct Candidate
@@ -343,7 +343,7 @@ bool GankerScheduler::ComputeTeleportPoint(Player* victim, float angleOffsetRad,
     if (!victim || !victim->GetMap())
         return false;
 
-    float radius = sPlayerbotAIConfig.gankerEngagementRadiusYards;
+    float radius = sPlayerbotAIConfig.GankerEngagementRadiusYards;
     float facing = victim->GetOrientation();
     // Place the bot behind the victim (facing + PI), optionally offset by
     // angleOffsetRad to spread pair members.
@@ -521,11 +521,11 @@ void GankerScheduler::OnGankerReleased(ObjectGuid bot, bool retreat)
     {
         ObjectGuid vguid = it->second;
         time_t now = time(nullptr);
-        float mult = sPlayerbotAIConfig.gankerRetreatCooldownMultiplier;
+        float mult = sPlayerbotAIConfig.GankerRetreatCooldownMultiplier;
         if (mult < 1.0f)
             mult = 1.0f;
         uint32 cooldown =
-            (uint32)(sPlayerbotAIConfig.gankerMaxSecondsBetweenAttempts * mult);
+            (uint32)(sPlayerbotAIConfig.GankerMaxSecondsBetweenAttempts * mult);
         time_t extendedUntil = now + cooldown;
         auto cdIt = nextEligibleAt.find(vguid);
         if (cdIt == nextEligibleAt.end() || cdIt->second < extendedUntil)
@@ -579,9 +579,9 @@ std::vector<std::string> GankerScheduler::GetStatusReport() const
 {
     std::vector<std::string> lines;
     std::ostringstream oss;
-    oss << "Ganker scheduler: enabled=" << (sPlayerbotAIConfig.gankerEnabled ? "1" : "0")
+    oss << "Ganker scheduler: enabled=" << (sPlayerbotAIConfig.GankerEnabled ? "1" : "0")
         << " activeGankers=" << activeGankers.size()
-        << "/" << sPlayerbotAIConfig.gankerMaxConcurrentGankers
+        << "/" << sPlayerbotAIConfig.GankerMaxConcurrentGankers
         << " trackedVictims=" << nextEligibleAt.size();
     lines.push_back(oss.str());
 

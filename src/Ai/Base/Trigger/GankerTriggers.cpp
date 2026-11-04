@@ -32,7 +32,7 @@ bool GankerTargetLostTrigger::IsActive()
     if (!victim->IsInWorld() || victim->GetMapId() != bot->GetMapId())
         return true;
 
-    if (bot->GetDistance(victim) > sPlayerbotAIConfig.gankerMaxPursueDistanceYards)
+    if (bot->GetDistance(victim) > sPlayerbotAIConfig.GankerMaxPursueDistanceYards)
         return true;
 
     if (!victim->IsPvP() && !bot->IsInCombatWith(victim))
@@ -70,7 +70,7 @@ bool GankerTargetDeadTrigger::IsActive()
     if (victim->GetMapId() != bot->GetMapId())
         return false;
 
-    if (bot->GetDistance(victim) > sPlayerbotAIConfig.gankerMaxPursueDistanceYards)
+    if (bot->GetDistance(victim) > sPlayerbotAIConfig.GankerMaxPursueDistanceYards)
         return false;
 
     if (victim->InBattleground() || (victim->GetMap() && victim->GetMap()->IsDungeon()))
@@ -103,7 +103,7 @@ bool GankerSelfDeadTrigger::IsActive()
     if (AI_VALUE(uint32, "ganker revive at") != 0)
         return false;
 
-    if (AI_VALUE(uint32, "ganker death count") >= sPlayerbotAIConfig.gankerMaxDeathsBeforeRetreat)
+    if (AI_VALUE(uint32, "ganker death count") >= sPlayerbotAIConfig.GankerMaxDeathsBeforeRetreat)
         return false;
 
     return true;
@@ -134,7 +134,7 @@ bool GankerShouldRetreatTrigger::IsActive()
     if (bot->IsAlive())
         return false;
 
-    return AI_VALUE(uint32, "ganker death count") >= sPlayerbotAIConfig.gankerMaxDeathsBeforeRetreat;
+    return AI_VALUE(uint32, "ganker death count") >= sPlayerbotAIConfig.GankerMaxDeathsBeforeRetreat;
 }
 
 bool GankerTargetOutOfRangeTrigger::IsActive()
@@ -146,5 +146,5 @@ bool GankerTargetOutOfRangeTrigger::IsActive()
     if (bot->IsInCombat())
         return false;
 
-    return bot->GetDistance(target) > sPlayerbotAIConfig.gankerEngagementRadiusYards;
+    return bot->GetDistance(target) > sPlayerbotAIConfig.GankerEngagementRadiusYards;
 }

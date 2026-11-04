@@ -27,7 +27,7 @@ bool StalkGankerTargetAction::Execute(Event /*event*/)
     if (!target)
         return false;
 
-    float standoff = sPlayerbotAIConfig.gankerEngagementRadiusYards;
+    float standoff = sPlayerbotAIConfig.GankerEngagementRadiusYards;
     float distance = bot->GetDistance(target);
 
     // Already at standoff range — stay in place to keep LOS without breaking it.
@@ -49,14 +49,14 @@ bool PursueGankerTargetAction::Execute(Event /*event*/)
     if (!target)
         return false;
 
-    return MoveNear(target, sPlayerbotAIConfig.gankerEngagementRadiusYards);
+    return MoveNear(target, sPlayerbotAIConfig.GankerEngagementRadiusYards);
 }
 
 bool ReleaseGankerAction::Execute(Event /*event*/)
 {
     bool isTempGroup = AI_VALUE(bool, "ganker is temp group");
     uint32 deathCount = AI_VALUE(uint32, "ganker death count");
-    bool retreat = deathCount >= sPlayerbotAIConfig.gankerMaxDeathsBeforeRetreat;
+    bool retreat = deathCount >= sPlayerbotAIConfig.GankerMaxDeathsBeforeRetreat;
 
     SET_AI_VALUE(ObjectGuid, "ganker target guid", ObjectGuid::Empty);
     SET_AI_VALUE(bool, "ganker is temp group", false);
@@ -103,8 +103,8 @@ bool CampGankerCorpseAction::Execute(Event /*event*/)
 
     if (campUntil == 0)
     {
-        uint32 minDur = sPlayerbotAIConfig.gankerCampDurationMinSeconds;
-        uint32 maxDur = sPlayerbotAIConfig.gankerCampDurationMaxSeconds;
+        uint32 minDur = sPlayerbotAIConfig.GankerCampDurationMinSeconds;
+        uint32 maxDur = sPlayerbotAIConfig.GankerCampDurationMaxSeconds;
         if (maxDur < minDur)
             maxDur = minDur;
         uint32 dur = (minDur == maxDur) ? minDur : urand(minDur, maxDur);
@@ -142,8 +142,8 @@ bool GankerStartReviveTimerAction::Execute(Event /*event*/)
     uint32 count = AI_VALUE(uint32, "ganker death count") + 1;
     SET_AI_VALUE(uint32, "ganker death count", count);
 
-    uint32 minDelay = sPlayerbotAIConfig.gankerRevivalDelayMinSeconds;
-    uint32 maxDelay = sPlayerbotAIConfig.gankerRevivalDelayMaxSeconds;
+    uint32 minDelay = sPlayerbotAIConfig.GankerRevivalDelayMinSeconds;
+    uint32 maxDelay = sPlayerbotAIConfig.GankerRevivalDelayMaxSeconds;
     if (maxDelay < minDelay)
         maxDelay = minDelay;
     uint32 delay = (minDelay == maxDelay) ? minDelay : urand(minDelay, maxDelay);
@@ -153,7 +153,7 @@ bool GankerStartReviveTimerAction::Execute(Event /*event*/)
     LOG_INFO("playerbots",
              "Ganker bot {} <{}> killed by victim, reviving in {}s (death {}/{})",
              bot->GetGUID().ToString().c_str(), bot->GetName().c_str(),
-             delay, count, sPlayerbotAIConfig.gankerMaxDeathsBeforeRetreat);
+             delay, count, sPlayerbotAIConfig.GankerMaxDeathsBeforeRetreat);
 
     return true;
 }
@@ -192,7 +192,7 @@ bool GankerResurrectAction::Execute(Event /*event*/)
              "Ganker bot {} <{}> resurrected, resuming pursuit (death {}/{})",
              bot->GetGUID().ToString().c_str(), bot->GetName().c_str(),
              AI_VALUE(uint32, "ganker death count"),
-             sPlayerbotAIConfig.gankerMaxDeathsBeforeRetreat);
+             sPlayerbotAIConfig.GankerMaxDeathsBeforeRetreat);
 
     return true;
 }

@@ -226,58 +226,58 @@ bool PlayerbotAIConfig::Initialize()
     FastReactInBG = sConfigMgr->GetOption<bool>("Playerbots.FastReactInBG", true);
 
     // Ganker system (M1)
-    gankerEnabled = sConfigMgr->GetOption<bool>("Playerbots.Ganker.Enabled", false);
-    gankerSchedulerIntervalSeconds =
+    GankerEnabled = sConfigMgr->GetOption<bool>("Playerbots.Ganker.Enabled", false);
+    GankerSchedulerIntervalSeconds =
         sConfigMgr->GetOption<int32>("Playerbots.Ganker.SchedulerIntervalSeconds", 30);
-    gankerMinSecondsBetweenAttempts =
+    GankerMinSecondsBetweenAttempts =
         sConfigMgr->GetOption<int32>("Playerbots.Ganker.MinSecondsBetweenAttempts", 300);
-    gankerMaxSecondsBetweenAttempts =
+    GankerMaxSecondsBetweenAttempts =
         sConfigMgr->GetOption<int32>("Playerbots.Ganker.MaxSecondsBetweenAttempts", 900);
-    gankerSpawnChancePercent =
+    GankerSpawnChancePercent =
         sConfigMgr->GetOption<int32>("Playerbots.Ganker.SpawnChancePercent", 60);
-    gankerLevelOffsetMin = sConfigMgr->GetOption<int32>("Playerbots.Ganker.LevelOffsetMin", -2);
-    gankerLevelOffsetMax = sConfigMgr->GetOption<int32>("Playerbots.Ganker.LevelOffsetMax", 5);
-    gankerWeightWarrior = sConfigMgr->GetOption<int32>("Playerbots.Ganker.WeightWarrior", 5);
-    gankerWeightPaladin = sConfigMgr->GetOption<int32>("Playerbots.Ganker.WeightPaladin", 3);
-    gankerWeightHunter = sConfigMgr->GetOption<int32>("Playerbots.Ganker.WeightHunter", 25);
-    gankerWeightRogue = sConfigMgr->GetOption<int32>("Playerbots.Ganker.WeightRogue", 30);
-    gankerWeightPriest = sConfigMgr->GetOption<int32>("Playerbots.Ganker.WeightPriest", 2);
-    gankerWeightDeathKnight =
+    GankerLevelOffsetMin = sConfigMgr->GetOption<int32>("Playerbots.Ganker.LevelOffsetMin", -2);
+    GankerLevelOffsetMax = sConfigMgr->GetOption<int32>("Playerbots.Ganker.LevelOffsetMax", 5);
+    GankerWeightWarrior = sConfigMgr->GetOption<int32>("Playerbots.Ganker.WeightWarrior", 5);
+    GankerWeightPaladin = sConfigMgr->GetOption<int32>("Playerbots.Ganker.WeightPaladin", 3);
+    GankerWeightHunter = sConfigMgr->GetOption<int32>("Playerbots.Ganker.WeightHunter", 25);
+    GankerWeightRogue = sConfigMgr->GetOption<int32>("Playerbots.Ganker.WeightRogue", 30);
+    GankerWeightPriest = sConfigMgr->GetOption<int32>("Playerbots.Ganker.WeightPriest", 2);
+    GankerWeightDeathKnight =
         sConfigMgr->GetOption<int32>("Playerbots.Ganker.WeightDeathKnight", 2);
-    gankerWeightShaman = sConfigMgr->GetOption<int32>("Playerbots.Ganker.WeightShaman", 3);
-    gankerWeightMage = sConfigMgr->GetOption<int32>("Playerbots.Ganker.WeightMage", 15);
-    gankerWeightWarlock = sConfigMgr->GetOption<int32>("Playerbots.Ganker.WeightWarlock", 8);
-    gankerWeightDruid = sConfigMgr->GetOption<int32>("Playerbots.Ganker.WeightDruid", 7);
-    gankerEngagementRadiusYards =
+    GankerWeightShaman = sConfigMgr->GetOption<int32>("Playerbots.Ganker.WeightShaman", 3);
+    GankerWeightMage = sConfigMgr->GetOption<int32>("Playerbots.Ganker.WeightMage", 15);
+    GankerWeightWarlock = sConfigMgr->GetOption<int32>("Playerbots.Ganker.WeightWarlock", 8);
+    GankerWeightDruid = sConfigMgr->GetOption<int32>("Playerbots.Ganker.WeightDruid", 7);
+    GankerEngagementRadiusYards =
         sConfigMgr->GetOption<float>("Playerbots.Ganker.EngagementRadiusYards", 35.0f);
-    gankerMaxPursueDistanceYards =
+    GankerMaxPursueDistanceYards =
         sConfigMgr->GetOption<float>("Playerbots.Ganker.MaxPursueDistanceYards", 200.0f);
-    gankerMaxConcurrentVictims =
+    GankerMaxConcurrentVictims =
         sConfigMgr->GetOption<int32>("Playerbots.Ganker.MaxConcurrentVictims", 4);
-    gankerMaxConcurrentGankers =
+    GankerMaxConcurrentGankers =
         sConfigMgr->GetOption<int32>("Playerbots.Ganker.MaxConcurrentGankers", 8);
     // Default off: the classic list stops at 1-60 content, so a victim in Outland
     // or Northrend was never eligible. AREATEAM_NONE covers those automatically.
-    gankerUseClassicZoneList =
+    GankerUseClassicZoneList =
         sConfigMgr->GetOption<bool>("Playerbots.Ganker.UseClassicZoneList", false);
     LoadList<std::vector<uint32>>(
         sConfigMgr->GetOption<std::string>(
             "Playerbots.Ganker.ContestedZoneIds",
             "33,440,3,51,46,267,45,405,406,400,357,490,1377,618,139,28,47,16,361"),
-        gankerContestedZoneIds);
-    gankerPairProbabilityPercent =
+        GankerContestedZoneIds);
+    GankerPairProbabilityPercent =
         sConfigMgr->GetOption<int32>("Playerbots.Ganker.PairProbabilityPercent", 30);
-    gankerCampDurationMinSeconds =
+    GankerCampDurationMinSeconds =
         sConfigMgr->GetOption<int32>("Playerbots.Ganker.CampDurationMinSeconds", 30);
-    gankerCampDurationMaxSeconds =
+    GankerCampDurationMaxSeconds =
         sConfigMgr->GetOption<int32>("Playerbots.Ganker.CampDurationMaxSeconds", 90);
-    gankerRevivalDelayMinSeconds =
+    GankerRevivalDelayMinSeconds =
         sConfigMgr->GetOption<int32>("Playerbots.Ganker.RevivalDelayMinSeconds", 15);
-    gankerRevivalDelayMaxSeconds =
+    GankerRevivalDelayMaxSeconds =
         sConfigMgr->GetOption<int32>("Playerbots.Ganker.RevivalDelayMaxSeconds", 45);
-    gankerMaxDeathsBeforeRetreat =
+    GankerMaxDeathsBeforeRetreat =
         sConfigMgr->GetOption<int32>("Playerbots.Ganker.MaxDeathsBeforeRetreat", 2);
-    gankerRetreatCooldownMultiplier =
+    GankerRetreatCooldownMultiplier =
         sConfigMgr->GetOption<float>("Playerbots.Ganker.RetreatCooldownMultiplier", 3.0f);
     LoadList<std::vector<uint32>>(
         sConfigMgr->GetOption<std::string>("Playerbots.RandomBotQuestIds", "3802,5505,6502,7761,7848,10277,10285,11492,"
@@ -1053,10 +1053,10 @@ bool PlayerbotAIConfig::IsInPvpProhibitedArea(uint32 id)
 
 bool PlayerbotAIConfig::IsContestedZone(uint32 zoneId)
 {
-    if (gankerUseClassicZoneList)
+    if (GankerUseClassicZoneList)
     {
-        return find(gankerContestedZoneIds.begin(), gankerContestedZoneIds.end(), zoneId) !=
-               gankerContestedZoneIds.end();
+        return find(GankerContestedZoneIds.begin(), GankerContestedZoneIds.end(), zoneId) !=
+               GankerContestedZoneIds.end();
     }
 
     AreaTableEntry const* zone = sAreaTableStore.LookupEntry(zoneId);

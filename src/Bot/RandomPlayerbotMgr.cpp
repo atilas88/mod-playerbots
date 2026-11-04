@@ -395,7 +395,7 @@ void RandomPlayerbotMgr::UpdateAIInternal(uint32 /*elapsed*/, bool /*minimal*/)
             sRandomPlayerbotMgr.CheckLfgQueue();
     }
 
-    if (sPlayerbotAIConfig.gankerEnabled && !players.empty())
+    if (sPlayerbotAIConfig.GankerEnabled && !players.empty())
     {
         gankerScheduler.Tick();
     }
@@ -2728,7 +2728,7 @@ void RandomPlayerbotMgr::OnPlayerLogout(Player* player)
 {
     DisablePlayerBot(player->GetGUID());
 
-    if (sPlayerbotAIConfig.gankerEnabled)
+    if (sPlayerbotAIConfig.GankerEnabled)
     {
         // The leaving player can be on either side of a gank. OnVictimGone only
         // releases the bots hunting it; if the leaver *is* the ganker bot, its own
