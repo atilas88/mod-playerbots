@@ -22,7 +22,7 @@
 
 void GankerScheduler::Tick()
 {
-    if (!sPlayerbotAIConfig.enabled || !sPlayerbotAIConfig.gankerEnabled)
+    if (!sPlayerbotAIConfig.Enabled || !sPlayerbotAIConfig.gankerEnabled)
         return;
 
     time_t now = time(nullptr);

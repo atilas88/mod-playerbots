@@ -31,7 +31,7 @@ bool StalkGankerTargetAction::Execute(Event /*event*/)
     float distance = bot->GetDistance(target);
 
     // Already at standoff range — stay in place to keep LOS without breaking it.
-    if (distance <= standoff && distance >= sPlayerbotAIConfig.contactDistance + 1.0f)
+    if (distance <= standoff && distance >= sPlayerbotAIConfig.ContactDistance + 1.0f)
         return false;
 
     return MoveNear(target, standoff);
