@@ -63,6 +63,31 @@ void LoadListString(std::string const value, T& list)
     }
 }
 
+// Parses "icc:5000,toc:4500" into a raid key -> minimum GearScore map; malformed entries are logged and skipped.
+static void ParseRaidRecruitMinGearScores(std::string const& csv, std::unordered_map<std::string, uint32>& out)
+{
+    out.clear();
+    std::istringstream stream(csv);
+    std::string entry;
+    while (getline(stream, entry, ','))
+    {
+        entry.erase(std::remove_if(entry.begin(), entry.end(), [](unsigned char c) { return std::isspace(c); }),
+                    entry.end());
+        if (entry.empty())
+            continue;
+
+        size_t const separator = entry.find(':');
+        std::string const value = separator == std::string::npos ? "" : entry.substr(separator + 1);
+        if (!separator || value.empty() || !std::all_of(value.begin(), value.end(), ::isdigit))
+        {
+            LOG_ERROR("playerbots", "Playerbots.RaidRecruitReply.MinGearScores: ignoring malformed entry '{}'", entry);
+            continue;
+        }
+
+        out[entry.substr(0, separator)] = static_cast<uint32>(atoi(value.c_str()));
+    }
+}
+
 // Parses a comma-separated, whitespace-tolerant bot name list (as used by both
 // Playerbots.LevelBrackets.ExcludeNames and Playerbots.ResetBotLevel.ExcludeNames) into out.
 static void ParseLevelMgrExcludeNames(std::string const& csv, std::vector<std::string>& out)
@@ -449,6 +474,26 @@ bool PlayerbotAIConfig::Initialize()
     ToxicLinksRepliesChance = sConfigMgr->GetOption<int32>("Playerbots.ToxicLinksRepliesChance", 30);    // 0-100
     ThunderfuryRepliesChance = sConfigMgr->GetOption<int32>("Playerbots.ThunderfuryRepliesChance", 40);  // 0-100
     GuildRepliesRate = sConfigMgr->GetOption<int32>("Playerbots.GuildRepliesRate", 100);                 // 0-100
+
+    RaidRecruitReplyEnabled = sConfigMgr->GetOption<bool>("Playerbots.RaidRecruitReply.Enable", false);
+    RaidRecruitReplyInChannel = sConfigMgr->GetOption<bool>("Playerbots.RaidRecruitReply.ReplyInChannel", false);
+    RaidRecruitReplyChance = sConfigMgr->GetOption<uint32>("Playerbots.RaidRecruitReply.Chance", 100);  // 0-100
+    RaidRecruitReplyMaxReplies = sConfigMgr->GetOption<uint32>("Playerbots.RaidRecruitReply.MaxReplies", 3);
+    RaidRecruitReplyMinDelay = sConfigMgr->GetOption<uint32>("Playerbots.RaidRecruitReply.MinDelay", 3);
+    RaidRecruitReplyMaxDelay = sConfigMgr->GetOption<uint32>("Playerbots.RaidRecruitReply.MaxDelay", 15);
+    if (RaidRecruitReplyMinDelay > RaidRecruitReplyMaxDelay)
+        std::swap(RaidRecruitReplyMinDelay, RaidRecruitReplyMaxDelay);
+
+    RaidRecruitReplyPlayerCooldown = sConfigMgr->GetOption<uint32>("Playerbots.RaidRecruitReply.PlayerCooldown", 60);
+    RaidRecruitReplySize25GearScoreBonus =
+        sConfigMgr->GetOption<uint32>("Playerbots.RaidRecruitReply.Size25GearScoreBonus", 200);
+    RaidRecruitReplyHeroicGearScoreBonus =
+        sConfigMgr->GetOption<uint32>("Playerbots.RaidRecruitReply.HeroicGearScoreBonus", 300);
+    ParseRaidRecruitMinGearScores(
+        sConfigMgr->GetOption<std::string>(
+            "Playerbots.RaidRecruitReply.MinGearScores",
+            "naxx:3200,os:3200,eoe:3400,voa:3800,uld:4000,ony:4500,toc:4500,icc:5000,rs:5600"),
+        RaidRecruitReplyMinGearScores);
 
     RandomBotJoinBG = sConfigMgr->GetOption<bool>("Playerbots.RandomBotJoinBG", true);
     RandomBotAutoJoinBG = sConfigMgr->GetOption<bool>("Playerbots.RandomBotAutoJoinBG", false);

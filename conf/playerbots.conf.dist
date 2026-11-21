@@ -2644,6 +2644,34 @@ Playerbots.RandomBotSayWithoutMaster = 0
 # Default: 1 (enabled)
 Playerbots.AnnounceConsumableUse = 1
 
+# Random bots answer raid recruitment messages that real players write in the General and
+# LookingForGroup channels, e.g. "need a dk tank for icc 25 5.5k+". Bots that match the role, the
+# class if one is named, and the GearScore reply after a short delay and accept the invite.
+# All GearScore values below are on the scale of the GearScore client addon (a full item level 264
+# set is about 6000), not an average item level.
+# Default: 0 (disabled)
+Playerbots.RaidRecruitReply.Enable = 0
+# Chance that a recruitment message gets replies (0-100)
+Playerbots.RaidRecruitReply.Chance = 100
+# Maximum number of bots replying to one message
+Playerbots.RaidRecruitReply.MaxReplies = 3
+# Bots reply after a random delay between these two values (seconds)
+Playerbots.RaidRecruitReply.MinDelay = 3
+Playerbots.RaidRecruitReply.MaxDelay = 15
+# Seconds before the same player can get replies again
+Playerbots.RaidRecruitReply.PlayerCooldown = 60
+# Where bots reply (0 = whisper to the player, 1 = in the channel the message was written in).
+# General is per zone, so with 1 a bot that is not on the player's channel still whispers.
+Playerbots.RaidRecruitReply.ReplyInChannel = 0
+# Minimum GearScore a bot needs to reply, per raid. A GearScore written in the message itself
+# ("5.5k+", "5800 gs") replaces these values. Raids missing from the list have no minimum.
+# Keys: naxx, os, eoe, voa, uld, ony, toc, icc, rs
+Playerbots.RaidRecruitReply.MinGearScores = "naxx:3200,os:3200,eoe:3400,voa:3800,uld:4000,ony:4500,toc:4500,icc:5000,rs:5600"
+# Added to the raid minimum when the message asks for the 25-player size
+Playerbots.RaidRecruitReply.Size25GearScoreBonus = 200
+# Added to the raid minimum when the message asks for heroic difficulty
+Playerbots.RaidRecruitReply.HeroicGearScoreBonus = 300
+
 #
 #
 ####################################################################################################

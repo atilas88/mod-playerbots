@@ -25,6 +25,7 @@
 #include "PlayerbotGuildMgr.h"
 #include "PlayerbotSpellRepository.h"
 #include "PlayerbotWorldThreadProcessor.h"
+#include "RaidRecruitMgr.h"
 #include "RandomPlayerbotMgr.h"
 #include "ScriptMgr.h"
 #include "ServerScript.h"
@@ -337,7 +338,7 @@ public:
         return true;
     }
 
-    bool OnPlayerCanUseChat(Player* player, uint32 type, uint32 /*lang*/, std::string& msg, Channel* channel) override
+    bool OnPlayerCanUseChat(Player* player, uint32 type, uint32 lang, std::string& msg, Channel* channel) override
     {
         PlayerbotMgr* const playerbotMgr = PlayerbotsMgr::instance().GetPlayerbotMgr(player);
 
@@ -345,6 +346,9 @@ public:
             playerbotMgr->HandleCommand(type, msg);
 
         sRandomPlayerbotMgr.HandleCommand(type, msg, player);
+
+        if (lang != LANG_ADDON)
+            RaidRecruitMgr::instance().OnChannelMessage(player, msg, channel);
 
         return true;
     }
@@ -547,6 +551,7 @@ public:
         PlayerbotHolder::UpdatePendingLogins();  // Headless sessions whose login holder is in flight
         sRandomPlayerbotMgr.UpdateSessions();  // Per-bot packet queues, world thread only
         PlayerbotWorldThreadProcessor::instance().Update(diff);
+        RaidRecruitMgr::instance().Update();
         sRandomPlayerbotMgr.UpdateAI(diff);  // World thread only
     }
 

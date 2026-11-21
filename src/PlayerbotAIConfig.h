@@ -251,6 +251,18 @@ public:
 
     uint32 BroadcastChanceGuildManagement;
 
+    // random bots answering raid recruitment messages in General and LookingForGroup
+    bool RaidRecruitReplyEnabled;
+    bool RaidRecruitReplyInChannel;
+    uint32 RaidRecruitReplyChance;
+    uint32 RaidRecruitReplyMaxReplies;
+    uint32 RaidRecruitReplyMinDelay;
+    uint32 RaidRecruitReplyMaxDelay;
+    uint32 RaidRecruitReplyPlayerCooldown;
+    uint32 RaidRecruitReplySize25GearScoreBonus;
+    uint32 RaidRecruitReplyHeroicGearScoreBonus;
+    std::unordered_map<std::string, uint32> RaidRecruitReplyMinGearScores;
+
     uint32 GuildRepliesRate;
 
     bool RandomBotJoinBG;
